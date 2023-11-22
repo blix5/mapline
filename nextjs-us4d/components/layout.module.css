@@ -1,0 +1,99 @@
+.main {
+    margin: 2rem 3rem 2rem 3rem;
+}
+
+.container {
+    max-width: 100%;
+    height: 100%;
+    padding: 0 0;
+    margin: 0 auto 0;
+}
+
+.link {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.header {
+    display: flex;
+    flex-direction: row;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 4rem;
+    background-color: #1D273D;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.logo {
+    filter: invert(1);
+    margin: 0 1rem 0 1rem;
+    height: 3.5rem;
+    width: 7.4076rem;
+}
+
+.headButton {
+    position: relative;
+    display: flex;
+    color: white;
+    font-family: 'Garamond', 'Georgia', 'Timew New Roman', Times, serif;
+    font-weight: 300;
+    font-size: 1rem;
+    overflow: hidden;
+    width: 8rem;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+    background-color: #1D273D;
+
+    transition: filter 0.2s linear;
+    filter: brightness(1);
+    -webkit-filter: brightness(1);
+}
+
+.selHeadButton {
+    font-weight: 500;
+    font-size: 1.2rem;
+    background-color: #3C517E;
+}
+
+.headButton:hover {
+    transition: filter 0.2s linear;
+    filter: brightness(1.5);
+    -webkit-filter: brightness(1.5);
+}
+
+.headButton:hover .headUl {
+    transition: width 0.2s ease-out;
+    width: 100%;
+}
+
+.headUl {
+    position: absolute;
+    fill:#999999;
+    stroke-width: 0;
+    bottom: 0;
+    
+    transition: width 0.2s ease-out;
+    width: 0;
+}
+
+.selHeadUl {
+    position: absolute;
+    fill:white;
+    stroke-width: 0;
+    bottom: 0;
+    width: 100%;
+}
+  
+@media (max-width: 40rem) and (orientation: portrait) {
+    .headerContainer {
+        width: 79.285px;
+        height: 15.465px;
+    }
+}
