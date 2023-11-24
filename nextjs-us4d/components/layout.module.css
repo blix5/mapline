@@ -32,6 +32,7 @@
 
 .logo {
     filter: invert(1);
+    -webkit-filter: invert(1);
     margin: 0 1rem 0 1rem;
     height: 3.5rem;
     width: 7.4076rem;
@@ -51,7 +52,10 @@
     align-items: center;
     background-color: #1D273D;
 
-    transition: filter 0.2s linear;
+    transition: filter 0.2s linear, -webkit-filter 0.2s linear;
+    -moz-transition: filter 0.2s linear, -webkit-filter 0.2s linear;
+    -ms-transition: filter 0.2s linear, -webkit-filter 0.2s linear;
+    -webkit-transition: filter 0.2s linear, -webkit-filter 0.2s linear;
     filter: brightness(1);
     -webkit-filter: brightness(1);
 }
@@ -63,14 +67,12 @@
 }
 
 .headButton:hover {
-    transition: filter 0.2s linear;
+    transition: all 0.2s linear;
+    -moz-transition: all 0.2s linear;
+    -ms-transition: all 0.2s linear;
+    -webkit-transition: all 0.2s linear;
     filter: brightness(1.5);
     -webkit-filter: brightness(1.5);
-}
-
-.headButton:hover .headUl {
-    transition: width 0.2s ease-out;
-    width: 100%;
 }
 
 .headUl {
@@ -78,9 +80,22 @@
     fill:#999999;
     stroke-width: 0;
     bottom: 0;
+    will-change: transform;
     
-    transition: width 0.2s ease-out;
-    width: 0;
+    transition: transform 0.2s ease-out;
+    -moz-transition: transform 0.2s ease-out;
+    -ms-transition: transform 0.2s ease-out;
+    -webkit-transition: transform 0.2s ease-out;
+    transform: scaleX(0%);
+}
+
+.headButton:hover .headUl {
+    will-change: transform;
+    transition: transform 0.2s ease-out;
+    -moz-transition: transform 0.2s ease-out;
+    -ms-transition: transform 0.2s ease-out;
+    -webkit-transition: transform 0.2s ease-out;
+    transform: scaleX(100%);
 }
 
 .selHeadUl {
@@ -88,7 +103,7 @@
     fill:white;
     stroke-width: 0;
     bottom: 0;
-    width: 100%;
+    transform: scaleX(100%);
 }
   
 @media (max-width: 40rem) and (orientation: portrait) {
