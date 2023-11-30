@@ -139,3 +139,15 @@
   justify-content: flex-start;
   align-items: center;
 }
+
+.timeline {
+  display: flex;
+  flex-direction: row;
+  position: relative;
+  overflow: scroll;
+  width: 100%;
+  background-color: #ddd;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: 20px;
+}

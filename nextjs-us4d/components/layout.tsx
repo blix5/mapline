@@ -28,7 +28,6 @@ export default function Layout({ children, page }) {
       <header className={styles.header}>
         <Link className={styles.link} href={page == "timeline" ? "javascript:void(0);" : "/"}>
           <Image className={styles.logo}
-            priority="true"
             src="/images/logo.png"
             height={644}
             width={1363}
@@ -36,7 +35,7 @@ export default function Layout({ children, page }) {
           />
         </Link>
         <Link className={styles.link} href={page == "timeline" ? "javascript:void(0);" : "/"}>
-          <div className={`${styles.headButton} ${page == "timeline" && styles.selHeadButton}`} priority="true">
+          <div className={`${styles.headButton} ${page == "timeline" && styles.selHeadButton}`}>
             TIMELINE
             <svg className={`${styles.headUl} ${page == "timeline" && styles.selHeadUl}`} width="8rem" height="0.3rem">
               <rect width="8rem" height="0.3rem"/>
@@ -44,7 +43,7 @@ export default function Layout({ children, page }) {
           </div>
         </Link>
         <Link className={styles.link} href={page == "about" ? "javascript:void(0);" : "/about"}>
-          <div className={`${styles.headButton} ${page == "about" && styles.selHeadButton}`} priority="true">
+          <div className={`${styles.headButton} ${page == "about" && styles.selHeadButton}`}>
             ABOUT
             <svg className={`${styles.headUl} ${page == "about" && styles.selHeadUl}`} width="8rem" height="0.3rem">
               <rect width="8rem" height="0.3rem"/>
@@ -52,7 +51,7 @@ export default function Layout({ children, page }) {
           </div>
         </Link>
         <Link className={styles.link} href={page == "sources" ? "javascript:void(0);" : "/sources"}>
-          <div className={`${styles.headButton} ${page == "sources" && styles.selHeadButton}`} priority="true">
+          <div className={`${styles.headButton} ${page == "sources" && styles.selHeadButton}`}>
             SOURCES
             <svg className={`${styles.headUl} ${page == "sources" && styles.selHeadUl}`} width="8rem" height="0.3rem">
               <rect width="8rem" height="0.3rem"/>
