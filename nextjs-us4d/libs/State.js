@@ -9,7 +9,9 @@ export default function State({ name, onCompleted, onError, ...rest }) {
         return "Loading...";
     }
     if(SvgIcon) {
-        return <SvgIcon {...rest} />;
+        return (
+            <SvgIcon {...rest} />
+        );
     }
     return null;
 }

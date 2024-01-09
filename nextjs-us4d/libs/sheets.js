@@ -25,6 +25,7 @@ export async function getStateList() {
                 height: row[2],
                 x: row[3],
                 y: row[4],
+                displayName: row[5]
             }));
         }
     } catch(err) {
