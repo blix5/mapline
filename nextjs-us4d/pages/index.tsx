@@ -22,21 +22,24 @@ export async function getStaticProps(context) {
 }
 
 export default function Home({ states, onCompleted, onError }) {
+  const mapLimX = 2400;
+  const mapLimY = 1280;
+
   const [inHidden, setInHidden] = React.useState(-1);
   const { width, height } = useWindowDimensions();
-  const [borderY, setBorderY] = React.useState(0.7);
-  const [mapPos, setMapPos] = React.useState({ x: 0, y: 0, scale: 1 });
+  const [borderY, setBorderY] = React.useState(0.5);
+  const [mapPos, setMapPos] = React.useState({ x: -1450, y: -275, scale: 1 });
   
   const onScroll = (e) => {
-    const delta = e.deltaY * -0.01;
+    const delta = e.deltaY * -0.003;
     var newScale = mapPos.scale + delta;
     const ratio = 1 - newScale / mapPos.scale;
     const mapHeight = (height - 64) * borderY;
 
     var newX = mapPos.x + (e.clientX - mapPos.x) * ratio;
     var newY = mapPos.y + (e.clientY - mapPos.y) * ratio;
-    if(newX > 0) newX = 0; else if(newX < width - 2500 * mapPos.scale) newX = width - 2500 * mapPos.scale;
-    if(newY > 0) newY = 0; else if(newY < mapHeight - 1700 * mapPos.scale) newY = mapHeight - 1700 * mapPos.scale;
+    if(newX > width / 2) newX = width / 2; else if(newX < width / 2 - mapLimX * mapPos.scale) newX = width / 2 - mapLimX * mapPos.scale;
+    if(newY > mapHeight / 2) newY = mapHeight / 2; else if(newY < mapHeight / 2 - mapLimY * mapPos.scale) newY = mapHeight / 2 - mapLimY * mapPos.scale;
     
     if(newScale < 0.5) setMapPos({scale: 0.5, x: mapPos.x, y: mapPos.y});
     else if(newScale > 1.5) setMapPos({scale: 1.5, x: mapPos.x, y: mapPos.y});
@@ -48,8 +51,8 @@ export default function Home({ states, onCompleted, onError }) {
 
     var newX = mapPos.x + data.deltaX;
     var newY = mapPos.y + data.deltaY;
-    if(newX > 0) newX = 0; else if(newX < width - 2500 * mapPos.scale) newX = width - 2500 * mapPos.scale;
-    if(newY > 0) newY = 0; else if(newY < mapHeight - 1700 * mapPos.scale) newY = mapHeight - 1700 * mapPos.scale;
+    if(newX > width / 2) newX = width / 2; else if(newX < width / 2 - mapLimX * mapPos.scale) newX = width / 2 - mapLimX * mapPos.scale;
+    if(newY > mapHeight / 2) newY = mapHeight / 2; else if(newY < mapHeight / 2 - mapLimY * mapPos.scale) newY = mapHeight / 2 - mapLimY * mapPos.scale;
     setMapPos({ x: newX, y: newY, scale: mapPos.scale });
   }
 
@@ -64,20 +67,33 @@ export default function Home({ states, onCompleted, onError }) {
           <div style={{position:"absolute",width:"100%",height:"100%",zIndex:100,
               transform:`translate(${mapPos.x}px, ${mapPos.y}px) scale(${mapPos.scale})`,
               transformOrigin:"top left"}}>
-            <svg className={utilStyles.ocean} width="2500px" height="1700px" style={{zIndex:"-100"}} ></svg>
+
+            <svg className={utilStyles.ocean} width={`${mapLimX}px`} height={`${mapLimY}px`} style={{zIndex:"-100"}} ></svg>
+            <svg className={utilStyles.mapShadow} width={`${mapLimX}px`} height={`${mapLimY * 2}px`} style={{zIndex:"102",
+                transform:`translate(${-1 * mapLimX}px, ${-0.5 * mapLimY}px)`}}></svg>
+            <svg className={utilStyles.mapShadow} width={`${mapLimX}px`} height={`${mapLimY * 2}px`} style={{zIndex:"102",
+                transform:`translate(${mapLimX}px, ${-0.5 * mapLimY}px)`}}></svg>
+            <svg className={utilStyles.mapShadow} width={`${mapLimX}px`} height={`${mapLimY}px`} style={{zIndex:"102",
+                transform:`translate(0px, ${-1 * mapLimY}px)`}}></svg>
+            <svg className={utilStyles.mapShadow} width={`${mapLimX}px`} height={`${mapLimY}px`} style={{zIndex:"102",
+                transform:`translate(0px, ${mapLimY}px)`}}></svg>
             {states.map((state, index) => (
               <>
-                <State name={state.name} className={`${utilStyles.state} ${utilStyles.stateHover}`} width={Number(state.width) + 5} height={Number(state.height) + 5}
-                  style={{left:state.x,top:state.y}} onCompleted={onCompleted} onError={onError} 
+                <State name={state.name} className={`${state.isState == "TRUE" ? utilStyles.state : utilStyles.nonState}
+                    ${state.isState == "TRUE" && utilStyles.stateHover}`} width={Number(state.width) + 5} height={Number(state.height) + 5}
+                    style={{left:state.x,top:state.y}} onCompleted={onCompleted} onError={onError} 
                     onMouseEnter={() => (setInHidden(index))}
                     onMouseLeave={() => inHidden == index && setInHidden(-1)}/>
-                {(inHidden != index) ? (
+                {(inHidden != index) ? (state.isState == "TRUE") && (
                   <>
-                    <State name={state.name} className={utilStyles.stateShadow} width={Number(state.width) + 5} height={Number(state.height) + 5}
-                      style={{left:state.x,top:state.y}} onCompleted={onCompleted} onError={onError} />
+                    <State name={state.name} className={utilStyles.stateShadow} width={Number(state.width) + 5}
+                        height={Number(state.height) + 5} style={{left:state.x,top:state.y}}
+                        onCompleted={onCompleted} onError={onError} />
                   </>) : (
                   <div style={{left:Number(state.x),top:Number(state.y),width:Number(state.width) + 5,height:Number(state.height) + 5}}>
-                    <h2 className={`${utilStyles.state} ${utilStyles.stateLabel}`}>{state.displayName}</h2>
+                    <h2 style={{fontSize:(state.width / 30) + 20}} className={`${utilStyles.state} ${utilStyles.stateLabel}`}>
+                      {state.displayName}
+                    </h2>
                   </div>
                 )}
               </>
@@ -86,7 +102,8 @@ export default function Home({ states, onCompleted, onError }) {
         </DraggableCore>
       </section>
       <div style={{position:"absolute",top:"4rem",zIndex:150,width:"100%"}}>
-        <DraggableCore onDrag={(e, data) => {setBorderY(((data.y - 15) < ((height - 64) * 0.15)) ? 0.15 : ((data.y - 15) > ((height - 64) * 0.85)) ? 0.85 : (data.y - 15) / (height - 64))}}>
+        <DraggableCore onDrag={(e, data) => {setBorderY(((data.y - 15) < ((height - 64) * 0.33)) ? 0.33 :
+            ((data.y - 15) > ((height - 64) * 0.67)) ? 0.67 : (data.y - 15) / (height - 64))}}>
           <div style={{position:"absolute",top:((height - 64) * borderY),width:"100%",backgroundColor:"#ccc",height:20}}></div>
         </DraggableCore>
       </div>

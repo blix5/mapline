@@ -92,8 +92,14 @@
   pointer-events: none;
 }
 
-.map .stateHover {
+.map .nonState {
+  fill: #b0bec6;
+  overflow: visible;
   z-index: 1;
+}
+
+.map .stateHover {
+  z-index: 2;
 }
 
 .stateLabel {
@@ -107,15 +113,16 @@
   justify-content: center;
   align-items: center;
   line-height: 1;
+  color: #5f7a92;
   text-shadow:
-  -1px -1px 0 #fff,
-   0   -1px 0 #fff,
-   1px -1px 0 #fff,
-   1px  0   0 #fff,
-   1px  1px 0 #fff,
-   0    1px 0 #fff,
-  -1px  1px 0 #fff,
-  -1px  0   0 #fff;
+  -2px -2px 0 #fff,
+   0   -2px 0 #fff,
+   2px -2px 0 #fff,
+   2px  0   0 #fff,
+   2px  2px 0 #fff,
+   0    2px 0 #fff,
+  -2px  2px 0 #fff,
+  -2px  0   0 #fff;
 
   animation: fadeInLabel ease 0.4s;
   animation-iteration-count: 1;
@@ -180,7 +187,7 @@
   width: 100%;
   justify-content: flex-start;
   align-items: center;
-  background-color: #000000;
+  background-color: #425A83;
 }
 
 .timeline {
@@ -197,5 +204,10 @@
 
 .ocean {
   background-color: #425A83;
-  box-shadow: inset 0 0 50px 25px #000000;
+}
+
+.mapShadow {
+  background-color: #425A83;
+  position: absolute;
+  box-shadow: 0 0 70px 100px #425A83;
 }

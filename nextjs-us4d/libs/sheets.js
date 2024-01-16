@@ -21,11 +21,12 @@ export async function getStateList() {
         if(rows.length) {
             return rows.map((row) => ({
                 name: row[0],
-                width: row[1],
-                height: row[2],
-                x: row[3],
-                y: row[4],
-                displayName: row[5]
+                displayName: row[1],
+                width: row[2],
+                height: row[3],
+                x: row[4],
+                y: row[5],
+                isState: row[6],
             }));
         }
     } catch(err) {
