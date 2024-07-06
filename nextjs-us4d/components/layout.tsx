@@ -26,18 +26,18 @@ export default function Layout({ children, page }) {
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
       <header className={styles.header}>
-        <Link className={styles.link} href={page == "timeline" ? "javascript:void(0);" : "/"}>
+        <Link className={`${styles.link} ${styles.logoContainer}`} href={page == "history" ? "javascript:void(0);" : "/"}>
           <Image className={styles.logo}
-            src="/images/logo.png"
-            height={644}
-            width={1363}
-            alt="US4D"
+            src="/images/logo_dark.png"
+            height={300}
+            width={900}
+            alt="MAPLINE"
           />
         </Link>
-        <Link className={styles.link} href={page == "timeline" ? "javascript:void(0);" : "/"}>
-          <div className={`${styles.headButton} ${page == "timeline" && styles.selHeadButton}`}>
-            TIMELINE
-            <svg className={`${styles.headUl} ${page == "timeline" && styles.selHeadUl}`} width="8rem" height="0.3rem">
+        <Link className={styles.link} href={page == "history" ? "javascript:void(0);" : "/"}>
+          <div className={`${styles.headButton} ${page == "history" && styles.selHeadButton}`}>
+            HISTORY
+            <svg className={`${styles.headUl} ${page == "history" && styles.selHeadUl}`} width="8rem" height="0.25rem">
               <rect width="8rem" height="0.3rem"/>
             </svg>
           </div>
@@ -45,7 +45,7 @@ export default function Layout({ children, page }) {
         <Link className={styles.link} href={page == "about" ? "javascript:void(0);" : "/about"}>
           <div className={`${styles.headButton} ${page == "about" && styles.selHeadButton}`}>
             ABOUT
-            <svg className={`${styles.headUl} ${page == "about" && styles.selHeadUl}`} width="8rem" height="0.3rem">
+            <svg className={`${styles.headUl} ${page == "about" && styles.selHeadUl}`} width="8rem" height="0.25rem">
               <rect width="8rem" height="0.3rem"/>
             </svg>
           </div>
@@ -53,14 +53,14 @@ export default function Layout({ children, page }) {
         <Link className={styles.link} href={page == "sources" ? "javascript:void(0);" : "/sources"}>
           <div className={`${styles.headButton} ${page == "sources" && styles.selHeadButton}`}>
             SOURCES
-            <svg className={`${styles.headUl} ${page == "sources" && styles.selHeadUl}`} width="8rem" height="0.3rem">
+            <svg className={`${styles.headUl} ${page == "sources" && styles.selHeadUl}`} width="8rem" height="0.25rem">
               <rect width="8rem" height="0.3rem"/>
             </svg>
           </div>
         </Link>
       </header>
       <main>
-        <div className={`${page != "timeline" && styles.main}`}>{children}</div>
+        <div className={`${page != "history" && styles.main}`}>{children}</div>
       </main>
     </div>
   );
