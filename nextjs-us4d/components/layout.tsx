@@ -4,8 +4,8 @@ import styles from './layout.module.css';
 import utilStyles from '../styles/utils.module.css';
 import Link from 'next/link';
 
-const name = 'US4D';
-export const siteTitle = 'US4D';
+const name = 'Mapline';
+export const siteTitle = 'Mapline';
 
 export default function Layout({ children, page }) {
   return (
@@ -14,7 +14,7 @@ export default function Layout({ children, page }) {
         <link rel="icon" href="/icon.ico" />
         <meta
           name="description"
-          content="US4D - History, now in time *and* space."
+          content="Mapline - map and a line what you want bro"
         />
         <meta
           property="og:image"
