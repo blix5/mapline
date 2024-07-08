@@ -89,6 +89,7 @@
   overflow: visible;
   pointer-events: none;
   stroke: #4B5B96;
+  stroke-width: 0.7rem;
 }
 
 .map .nonState {
@@ -97,6 +98,7 @@
   pointer-events: none;
   z-index: 1;
   stroke: #4B5B96;
+  stroke-width: 0.7rem;
 }
 
 .nonStateLabel {
@@ -123,6 +125,10 @@
   -webkit-animation: fadeInLabel ease 0.4s;
   -webkit-animation-iteration-count: 1;
   -webkit-animation-fill-mode: forwards;
+
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 
   color: #4C547C;
   text-transform: uppercase;
@@ -164,6 +170,10 @@
   -webkit-animation: fadeInLabel ease 0.4s;
   -webkit-animation-iteration-count: 1;
   -webkit-animation-fill-mode: forwards;
+
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 
   -webkit-text-stroke: .15rem #EEE9F3;
   paint-order: stroke fill;
@@ -241,6 +251,10 @@
   font-weight: 100;
   font-size: 1.2rem;
   color: #E9EAF3;
+
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .scroll {
@@ -252,4 +266,45 @@
   left: 0.3rem;
   border-radius: 0.2rem;
   z-index: 200;
+}
+
+.markerLine {
+  position: absolute;
+  left: calc(50vw - 0.2rem);
+  width: 0.4rem;
+  height: 100%;
+  background-color: rgba(238, 99, 82, 0.8);
+}
+
+.markerYear {
+  display: flex;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+}
+
+.markerYear h3 {
+  position: absolute;
+  font-weight: 100;
+  font-size: 1rem;
+  top: -0.5rem;
+  color: #E9EAF3;
+  z-index: 300;
+  background-color: rgba(197, 82, 67, 0.8);
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  border: 0.2rem solid rgba(238, 99, 82, 0.8);
+  border-radius: 1rem;
+
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.marker {
+  border-bottom: 0.5rem solid rgba(238, 99, 82, 0.8);
+  border-left: 0.3rem solid transparent;
+  border-right: 0.3rem solid transparent;
+  height: 0;
+  width: 1rem;
 }

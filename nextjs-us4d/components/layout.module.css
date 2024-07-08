@@ -30,6 +30,12 @@
     align-items: center;
 }
 
+.header * {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
 .logo {
     /*filter: invert(1);
     -webkit-filter: invert(1);*/

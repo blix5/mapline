@@ -10,6 +10,7 @@ import { getStateList } from '../libs/sheets';
 import State from '../libs/State';
 import Draggable, {DraggableCore} from 'react-draggable';
 import useWindowDimensions from '../components/useWindowDimensions';
+import DecimalYearToDate from '../components/dateDecimal';
 
 export async function getStaticProps(context) {
   const states = await getStateList();
@@ -33,6 +34,12 @@ export default function Home({ states, onCompleted, onError }) {
 
   const [mapPos, setMapPos] = React.useState({ x: -1450, y: -275, scale: 1 });
   const [timePos, setTimePos] = React.useState({ x: 0, y: 0, scale: 1, year: 1492 });
+
+  const [timeSinceScroll, setTimeSinceScroll] = React.useState(0);
+  React.useEffect(() => {
+    const timer = setTimeout(() => (timeSinceScroll < 450) && setTimeSinceScroll(timeSinceScroll + 1), 10);
+    return () => clearTimeout(timer);
+  }, [timeSinceScroll]);
   
   const onMapScroll = (e) => {
     const delta = e.deltaY * -0.003;
@@ -64,6 +71,7 @@ export default function Home({ states, onCompleted, onError }) {
     var newX = timePos.x - e.deltaY;
     if(newX > 0) newX = 0; else if(newX < timeLimX + width) newX = timeLimX + width;
     setTimePos({ x: newX, y: timePos.y, scale: timePos.scale, year: ((-timePos.x + (width / 2)) / 100) + 1491.5});
+    setTimeSinceScroll(0);
   }
 
   const convertDateToDecimal = (dateString) => {
@@ -133,12 +141,11 @@ export default function Home({ states, onCompleted, onError }) {
       <div style={{position:"absolute",top:"3.5rem",zIndex:150,width:"100%"}}>
         <DraggableCore onDrag={(e, data) => {setBorderY(((data.y - 15) < ((height - 64) * 0.4)) ? 0.4 :
             ((data.y - 15) > ((height - 64) * 0.75)) ? 0.75 : (data.y - 15) / (height - 64))}}>
-          <div style={{position:"relative",top:((height - 64) * borderY),width:"100%",height:20,backgroundColor:'rgba(0,0,0,0.5)',cursor:'ns-resize'}}></div>
+          <div style={{position:"relative",top:((height - 64) * borderY),width:"100%",height:20,cursor:'ns-resize'}}></div>
         </DraggableCore>
       </div>
       
       {/* TIMELINE */}
-      {timePos.year}
       <section className={utilStyles.timeline} onWheelCapture={onTimeXScroll}
           style={{height:height - ((height - 64) * borderY)}}>
         <div style={{position:"absolute",width:"100%",height:"100%",zIndex:100,
@@ -148,8 +155,15 @@ export default function Home({ states, onCompleted, onError }) {
           thas some content type shit
 
         </div>
+
+        {/* MARKER LINE */}
+        <div style={{opacity:`${(timeSinceScroll < 300) ? 1 : ((timeSinceScroll > 350) ? 0.5 : ((timeSinceScroll - 400) / -100))}`}}
+            className={`${utilStyles.markerLine}`}>
+          
+        </div>
       </section>
 
+      {/* NUMBER LINE — YEARS */}
       <section className={`${utilStyles.numberLine}`} onWheelCapture={onTimeXScroll}>
         <div style={{transform:`translate(${timePos.x}px)`}}>
           {[...Array(529)].map((e, i) => (
@@ -159,9 +173,24 @@ export default function Home({ states, onCompleted, onError }) {
           ))}
         </div>
 
-        <DraggableCore onDrag={(e, data) => {setTimePos({x: (timePos.x + (data.deltaX * (timeLimX / width))) > 0 ? 0 :
-              ((timePos.x + (data.deltaX * (timeLimX / width))) < timeLimX + width) ? timeLimX + width: (timePos.x + (data.deltaX * (timeLimX / width))), 
-              y: timePos.y, scale: timePos.scale, year: ((-timePos.x + (width / 2)) / 100) + 1491.5})}}>
+        {/* MARKERS */}
+        <div style={{opacity:`${(timeSinceScroll < 300) ? 1 : ((timeSinceScroll > 350) ? 0.5 : ((timeSinceScroll - 400) / -100))}`}}
+              className={`${utilStyles.markerYear}`}>
+          <div className={`${utilStyles.marker}`}>
+
+          </div>
+          <h3>
+            {DecimalYearToDate(timePos.year)}
+          </h3>
+        </div>
+
+        {/* SCROLL */}
+        <DraggableCore onDrag={(e, data) => {
+            setTimeSinceScroll(0);
+            setTimePos({x: (timePos.x + (data.deltaX * (timeLimX / width))) > 0 ? 0 :
+                ((timePos.x + (data.deltaX * (timeLimX / width))) < timeLimX + width) ? timeLimX + width: (timePos.x + (data.deltaX * (timeLimX / width))), 
+                y: timePos.y, scale: timePos.scale, year: ((-timePos.x + (width / 2)) / 100) + 1491.5})
+        }} onStop={() => {setTimeSinceScroll(1);}}>
           <div className={`${utilStyles.scroll}`} style={{transform:`translate(${timePos.x / (timeLimX / width)}px)`}}></div>
         </DraggableCore>
         
