@@ -25,12 +25,14 @@ export default function Home({ states, onCompleted, onError }) {
   const mapLimX = 2400;
   const mapLimY = 1280;
 
+  const timeLimX = -52900;
+
   const [inHidden, setInHidden] = React.useState(-1);
   const { width, height } = useWindowDimensions();
   const [borderY, setBorderY] = React.useState(0.6);
 
   const [mapPos, setMapPos] = React.useState({ x: -1450, y: -275, scale: 1 });
-  const [timePos, setTimePos] = React.useState({ x: 0, y: 0, scale: 1, year: 1900 });
+  const [timePos, setTimePos] = React.useState({ x: 0, y: 0, scale: 1, year: 1492 });
   
   const onMapScroll = (e) => {
     const delta = e.deltaY * -0.003;
@@ -60,7 +62,15 @@ export default function Home({ states, onCompleted, onError }) {
 
   const onTimeXScroll = (e) => {
     var newX = timePos.x - e.deltaY;
-    setTimePos({ x: newX, y: timePos.y, scale: timePos.scale, year: timePos.year });
+    if(newX > 0) newX = 0; else if(newX < timeLimX + width) newX = timeLimX + width;
+    setTimePos({ x: newX, y: timePos.y, scale: timePos.scale, year: ((-timePos.x + (width / 2)) / 100) + 1491.5});
+  }
+
+  const convertDateToDecimal = (dateString) => {
+    const month = Number(String(dateString).substring(0, 2));
+    const day = Number(String(dateString).substring(3, 5));
+    const year = Number(String(dateString).substring(6, 10));
+    return year + (month / 12) + (day / 365);
   }
 
   return (
@@ -68,6 +78,9 @@ export default function Home({ states, onCompleted, onError }) {
       <Head>
         <title>{siteTitle}</title>
       </Head>
+
+      {/* MAP */}
+
       <section className={utilStyles.map} onWheelCapture={onMapScroll}
           style={{height:((height - 64) * borderY)}}>
         <DraggableCore onDrag={(e, data) => {onMapDrag(data)}}>
@@ -87,29 +100,35 @@ export default function Home({ states, onCompleted, onError }) {
 
             {states.map((state, index) => (
               <>
-                <State name={state.name} className={`${state.isState == "TRUE" ? utilStyles.state : utilStyles.nonState}
-                    ${state.isState == "TRUE" && utilStyles.stateHover}`} width={Number(state.width) + 5} height={Number(state.height) + 5}
-                    style={{left:state.x,top:state.y}} onCompleted={onCompleted} onError={onError} 
-                    onMouseEnter={() => (setInHidden(index))}
-                    onMouseLeave={() => inHidden == index && setInHidden(-1)}/>
-                {(inHidden == index) && (
-                  <div style={{
-                    left:Number(state.x),
-                    top:Number(state.y),
-                    width:Number(state.width) + 5,
-                    height:Number(state.height) + 5,
-                    fontSize:((2/3) * Number(state.width) + (1/3) * Number(state.height)) / 15 + 10
-                  }}>
-                    <h2 className={`${utilStyles.state} ${state.isState == "TRUE" ? utilStyles.stateLabel : utilStyles.nonStateLabel}`}>
-                      {state.displayName}
-                    </h2>
-                  </div>
-                )}
+                {(convertDateToDecimal(state.startDate) <= timePos.year && convertDateToDecimal(state.endDate) > timePos.year) &&
+                  <>
+                    <State name={state.name} className={`${(Number(convertDateToDecimal(state.stateDate)) <= timePos.year) ? utilStyles.state : utilStyles.nonState}
+                        ${(Number(convertDateToDecimal(state.stateDate)) <= timePos.year) && utilStyles.stateHover}`} width={Number(state.width) + 5} height={Number(state.height) + 5}
+                        style={{left:state.x,top:state.y}} onCompleted={onCompleted} onError={onError} 
+                        onMouseEnter={() => (setInHidden(index))}
+                        onMouseLeave={() => inHidden == index && setInHidden(-1)}/>
+                    {(inHidden == index) && (
+                      <div style={{
+                        left:Number(state.x),
+                        top:Number(state.y),
+                        width:Number(state.width) + 5,
+                        height:Number(state.height) + 5,
+                        fontSize:((2/3) * Number(state.width) + (1/3) * Number(state.height)) / 15 + 10
+                      }}>
+                        <h2 className={`${utilStyles.state} ${(Number(convertDateToDecimal(state.stateDate)) <= timePos.year) ? utilStyles.stateLabel : utilStyles.nonStateLabel}`}>
+                          {state.displayName}
+                        </h2>
+                      </div>
+                    )}
+                  </>
+                }
               </>
             ))}
           </div>
         </DraggableCore>
       </section>
+
+      {/* DRAG BORDER */}
 
       <div style={{position:"absolute",top:"3.5rem",zIndex:150,width:"100%"}}>
         <DraggableCore onDrag={(e, data) => {setBorderY(((data.y - 15) < ((height - 64) * 0.4)) ? 0.4 :
@@ -118,19 +137,34 @@ export default function Home({ states, onCompleted, onError }) {
         </DraggableCore>
       </div>
       
+      {/* TIMELINE */}
+      {timePos.year}
       <section className={utilStyles.timeline} onWheelCapture={onTimeXScroll}
           style={{height:height - ((height - 64) * borderY)}}>
         <div style={{position:"absolute",width:"100%",height:"100%",zIndex:100,
             transform:`translate(${timePos.x}px, ${timePos.y}px) scale(${timePos.scale})`,
             transformOrigin:"top left"}}>
 
-          {timePos.x}
+          thas some content type shit
 
         </div>
       </section>
 
-      <section className={`${utilStyles.numberLine}`}>
-        1892
+      <section className={`${utilStyles.numberLine}`} onWheelCapture={onTimeXScroll}>
+        <div style={{transform:`translate(${timePos.x}px)`}}>
+          {[...Array(529)].map((e, i) => (
+            <h2 style={{transform:`translate(${(i * 100) + 20}px, 0rem)`}}>
+              {(i + 1492)}
+            </h2>
+          ))}
+        </div>
+
+        <DraggableCore onDrag={(e, data) => {setTimePos({x: (timePos.x + (data.deltaX * (timeLimX / width))) > 0 ? 0 :
+              ((timePos.x + (data.deltaX * (timeLimX / width))) < timeLimX + width) ? timeLimX + width: (timePos.x + (data.deltaX * (timeLimX / width))), 
+              y: timePos.y, scale: timePos.scale, year: ((-timePos.x + (width / 2)) / 100) + 1491.5})}}>
+          <div className={`${utilStyles.scroll}`} style={{transform:`translate(${timePos.x / (timeLimX / width)}px)`}}></div>
+        </DraggableCore>
+        
       </section>
     </Layout>
   );

@@ -26,7 +26,7 @@ export async function getStateList() {
                 height: row[3],
                 x: row[4],
                 y: row[5],
-                isState: row[6],
+                stateDate: row[6],
                 startDate: row[7],
                 endDate: row[8]
             }));
