@@ -130,7 +130,7 @@ export default function Home({ states, onCompleted, onError }) {
                         style={{left:state.x,top:state.y}} onCompleted={onCompleted} onError={onError}
                         onMouseEnter={() => (setInHidden(index))}
                         onMouseLeave={() => inHidden == index && setInHidden(-1)}/>
-                    {(true /*inHidden == index*/) && (
+                    {(inHidden == index) && (
                       <div style={{
                         left:Number(state.x) + Number(state.xLabel),
                         top:Number(state.y) + Number(state.yLabel),
