@@ -28,7 +28,9 @@ export async function getStateList() {
                 y: row[5],
                 stateDate: row[6],
                 startDate: row[7],
-                endDate: row[8]
+                endDate: row[8],
+                xLabel: row[9],
+                yLabel: row[10]
             }));
         }
     } catch(err) {

@@ -12,6 +12,8 @@ import Draggable, {DraggableCore} from 'react-draggable';
 import useWindowDimensions from '../components/useWindowDimensions';
 import DecimalYearToDate from '../components/dateDecimal';
 
+import { parseAsFloat, useQueryState } from 'next-usequerystate';
+
 export async function getStaticProps(context) {
   const states = await getStateList();
   return {
@@ -32,8 +34,14 @@ export default function Home({ states, onCompleted, onError }) {
   const { width, height } = useWindowDimensions();
   const [borderY, setBorderY] = React.useState(0.6);
 
-  const [mapPos, setMapPos] = React.useState({ x: -1450, y: -275, scale: 1 });
-  const [timePos, setTimePos] = React.useState({ x: 0, y: 0, scale: 1, year: 1492 });
+  const [mapX, setMapX] = useQueryState('mpx', parseAsFloat.withDefault(-1450));
+  const [mapY, setMapY] = useQueryState('mpy', parseAsFloat.withDefault(-275));
+  const [mapScale, setMapScale] = useQueryState('mps', parseAsFloat.withDefault(1));
+
+  const [timeX, setTimeX] = useQueryState('tpx', parseAsFloat.withDefault(0));
+  const [timeY, setTimeY] = useQueryState('tpy', parseAsFloat.withDefault(0));
+  const [timeScale, setTimeScale] = useQueryState('tps', parseAsFloat.withDefault(1));
+  const [timeYear, setTimeYear] = useQueryState('tyear', parseAsFloat.withDefault(1492))
 
   const [timeSinceScroll, setTimeSinceScroll] = React.useState(0);
   React.useEffect(() => {
@@ -43,34 +51,41 @@ export default function Home({ states, onCompleted, onError }) {
   
   const onMapScroll = (e) => {
     const delta = e.deltaY * -0.003;
-    var newScale = mapPos.scale + delta;
-    const ratio = 1 - newScale / mapPos.scale;
+    var newScale = mapScale + delta;
+    const ratio = 1 - newScale / mapScale;
     const mapHeight = (height - 64) * borderY;
 
-    var newX = mapPos.x + (e.clientX - mapPos.x) * ratio;
-    var newY = mapPos.y + (e.clientY - mapPos.y) * ratio;
-    if(newX > width / 2) newX = width / 2; else if(newX < width / 2 - mapLimX * mapPos.scale) newX = width / 2 - mapLimX * mapPos.scale;
-    if(newY > mapHeight / 2) newY = mapHeight / 2; else if(newY < mapHeight / 2 - mapLimY * mapPos.scale) newY = mapHeight / 2 - mapLimY * mapPos.scale;
+    var newX = mapX + (e.clientX - mapX) * ratio;
+    var newY = mapY + (e.clientY - mapY) * ratio;
+    if(newX > width / 2) newX = width / 2; else if(newX < width / 2 - mapLimX * mapScale) newX = width / 2 - mapLimX * mapScale;
+    if(newY > mapHeight / 2) newY = mapHeight / 2; else if(newY < mapHeight / 2 - mapLimY * mapScale) newY = mapHeight / 2 - mapLimY * mapScale;
     
-    if(newScale < 0.5) setMapPos({scale: 0.5, x: mapPos.x, y: mapPos.y});
-    else if(newScale > 1.5) setMapPos({scale: 1.5, x: mapPos.x, y: mapPos.y});
-    else setMapPos({scale: newScale, x: newX, y: newY});
+    if(newScale < 0.5) setMapScale(0.5);
+    else if(newScale > 1.5) setMapScale(1.5);
+    else {
+      setMapX(newX);
+      setMapY(newY);
+      setMapScale(newScale);
+    }
+    
   };
 
   const onMapDrag = (data) => {
     const mapHeight = (height - 64) * borderY;
 
-    var newX = mapPos.x + data.deltaX;
-    var newY = mapPos.y + data.deltaY;
-    if(newX > width / 2) newX = width / 2; else if(newX < width / 2 - mapLimX * mapPos.scale) newX = width / 2 - mapLimX * mapPos.scale;
-    if(newY > mapHeight / 2) newY = mapHeight / 2; else if(newY < mapHeight / 2 - mapLimY * mapPos.scale) newY = mapHeight / 2 - mapLimY * mapPos.scale;
-    setMapPos({ x: newX, y: newY, scale: mapPos.scale });
+    var newX = mapX + data.deltaX;
+    var newY = mapY + data.deltaY;
+    if(newX > width / 2) newX = width / 2; else if(newX < width / 2 - mapLimX * mapScale) newX = width / 2 - mapLimX * mapScale;
+    if(newY > mapHeight / 2) newY = mapHeight / 2; else if(newY < mapHeight / 2 - mapLimY * mapScale) newY = mapHeight / 2 - mapLimY * mapScale;
+    setMapX(newX);
+    setMapY(newY);
   }
 
   const onTimeXScroll = (e) => {
-    var newX = timePos.x - e.deltaY;
+    var newX = timeX - e.deltaY;
     if(newX > 0) newX = 0; else if(newX < timeLimX + width) newX = timeLimX + width;
-    setTimePos({ x: newX, y: timePos.y, scale: timePos.scale, year: ((-timePos.x + (width / 2)) / 100) + 1491.5});
+    setTimeX(newX);
+    setTimeYear(((-timeX + (width / 2)) / 100) + 1491.5);
     setTimeSinceScroll(0);
   }
 
@@ -93,7 +108,7 @@ export default function Home({ states, onCompleted, onError }) {
           style={{height:((height - 64) * borderY)}}>
         <DraggableCore onDrag={(e, data) => {onMapDrag(data)}}>
           <div style={{cursor:"move",position:"absolute",width:"100%",height:"100%",zIndex:100,
-              transform:`translate(${mapPos.x}px, ${mapPos.y}px) scale(${mapPos.scale})`,
+              transform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,
               transformOrigin:"top left"}}>
 
             <svg className={utilStyles.ocean} width={`${mapLimX}px`} height={`${mapLimY}px`} style={{zIndex:"-100"}} ></svg>
@@ -108,22 +123,22 @@ export default function Home({ states, onCompleted, onError }) {
 
             {states.map((state, index) => (
               <>
-                {(convertDateToDecimal(state.startDate) <= timePos.year && convertDateToDecimal(state.endDate) > timePos.year) &&
+                {(convertDateToDecimal(state.startDate) <= timeYear && convertDateToDecimal(state.endDate) > timeYear) &&
                   <>
-                    <State name={state.name} className={`${(Number(convertDateToDecimal(state.stateDate)) <= timePos.year) ? utilStyles.state : utilStyles.nonState}
-                        ${(Number(convertDateToDecimal(state.stateDate)) <= timePos.year) && utilStyles.stateHover}`} width={Number(state.width) + 5} height={Number(state.height) + 5}
-                        style={{left:state.x,top:state.y}} onCompleted={onCompleted} onError={onError} 
+                    <State name={state.name} className={`${utilStyles.state} ${(Number(convertDateToDecimal(state.stateDate)) > timeYear) && utilStyles.nonState}
+                        ${(Number(convertDateToDecimal(state.stateDate)) <= timeYear) && utilStyles.stateHover}`} width={Number(state.width) + 5} height={Number(state.height) + 5}
+                        style={{left:state.x,top:state.y}} onCompleted={onCompleted} onError={onError}
                         onMouseEnter={() => (setInHidden(index))}
                         onMouseLeave={() => inHidden == index && setInHidden(-1)}/>
-                    {(inHidden == index) && (
+                    {(true /*inHidden == index*/) && (
                       <div style={{
-                        left:Number(state.x),
-                        top:Number(state.y),
+                        left:Number(state.x) + Number(state.xLabel),
+                        top:Number(state.y) + Number(state.yLabel),
                         width:Number(state.width) + 5,
                         height:Number(state.height) + 5,
-                        fontSize:((2/3) * Number(state.width) + (1/3) * Number(state.height)) / 15 + 10
+                        fontSize: 6 * Math.pow((2/3) * Number(state.width) + (1/3) * Number(state.height), 0.3)
                       }}>
-                        <h2 className={`${utilStyles.state} ${(Number(convertDateToDecimal(state.stateDate)) <= timePos.year) ? utilStyles.stateLabel : utilStyles.nonStateLabel}`}>
+                        <h2 className={`${utilStyles.state} ${utilStyles.stateLabel} ${(Number(convertDateToDecimal(state.stateDate)) > timeYear) && utilStyles.nonStateLabel}`}>
                           {state.displayName}
                         </h2>
                       </div>
@@ -149,7 +164,7 @@ export default function Home({ states, onCompleted, onError }) {
       <section className={utilStyles.timeline} onWheelCapture={onTimeXScroll}
           style={{height:height - ((height - 64) * borderY)}}>
         <div style={{position:"absolute",width:"100%",height:"100%",zIndex:100,
-            transform:`translate(${timePos.x}px, ${timePos.y}px) scale(${timePos.scale})`,
+            transform:`translate(${timeX}px, ${timeY}px) scale(${timeScale})`,
             transformOrigin:"top left"}}>
 
           thas some content type shit
@@ -165,7 +180,7 @@ export default function Home({ states, onCompleted, onError }) {
 
       {/* NUMBER LINE — YEARS */}
       <section className={`${utilStyles.numberLine}`} onWheelCapture={onTimeXScroll}>
-        <div style={{transform:`translate(${timePos.x}px)`}}>
+        <div style={{transform:`translate(${timeX}px)`}}>
           {[...Array(529)].map((e, i) => (
             <h2 style={{transform:`translate(${(i * 100) + 20}px, 0rem)`}}>
               {(i + 1492)}
@@ -180,18 +195,19 @@ export default function Home({ states, onCompleted, onError }) {
 
           </div>
           <h3>
-            {DecimalYearToDate(timePos.year)}
+            {DecimalYearToDate(timeYear)}
           </h3>
         </div>
 
         {/* SCROLL */}
         <DraggableCore onDrag={(e, data) => {
             setTimeSinceScroll(0);
-            setTimePos({x: (timePos.x + (data.deltaX * (timeLimX / width))) > 0 ? 0 :
-                ((timePos.x + (data.deltaX * (timeLimX / width))) < timeLimX + width) ? timeLimX + width: (timePos.x + (data.deltaX * (timeLimX / width))), 
-                y: timePos.y, scale: timePos.scale, year: ((-timePos.x + (width / 2)) / 100) + 1491.5})
+            setTimeX((timeX + (data.deltaX * (timeLimX / width))) > 0 ? 0 : ((timeX + (data.deltaX * (timeLimX / width))) < timeLimX + width)
+                ? timeLimX + width: (timeX + (data.deltaX * (timeLimX / width))));
+            setTimeYear(((-timeX + (width / 2)) / 100) + 1491.5);
+            
         }} onStop={() => {setTimeSinceScroll(1);}}>
-          <div className={`${utilStyles.scroll}`} style={{transform:`translate(${timePos.x / (timeLimX / width)}px)`}}></div>
+          <div className={`${utilStyles.scroll}`} style={{transform:`translate(${timeX / (timeLimX / width)}px)`}}></div>
         </DraggableCore>
         
       </section>

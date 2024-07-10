@@ -2,7 +2,7 @@ html,
 body {
   padding: 0;
   margin: 0;
-  font-family: 'Futura', Helvetica, Arial, sans-serif;
+  font-family: 'Futura', 'Avenir', 'Century Gothic', 'Gill Sans', 'Avant Garde Gothic', 'Helvetica Neue', 'Proxima Nova', 'Lato', Helvetica, Arial, sans-serif;
   line-height: 1.6;
   font-size: 18px;
   overflow: hidden;
