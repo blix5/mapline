@@ -28,7 +28,8 @@ export default function Home({ states, onCompleted, onError }) {
   const mapLimX = 2400;
   const mapLimY = 1280;
 
-  const timeLimX = -52900;
+  const timeLimX = 52900;
+  const timeLimY = 2000;
 
   const [inHidden, setInHidden] = React.useState(-1);
   const { width, height } = useWindowDimensions();
@@ -42,6 +43,9 @@ export default function Home({ states, onCompleted, onError }) {
   const [timeY, setTimeY] = useQueryState('tpy', parseAsFloat.withDefault(0));
   const [timeScale, setTimeScale] = useQueryState('tps', parseAsFloat.withDefault(1));
   const [timeYear, setTimeYear] = useQueryState('tyear', parseAsFloat.withDefault(1492))
+
+  const numberLineRef = React.useRef(null);
+  const timelineRef = React.useRef(null);
 
   const [timeSinceScroll, setTimeSinceScroll] = React.useState(0);
   React.useEffect(() => {
@@ -81,11 +85,27 @@ export default function Home({ states, onCompleted, onError }) {
     setMapY(newY);
   }
 
-  const onTimeXScroll = (e) => {
-    var newX = timeX - e.deltaY;
-    if(newX > 0) newX = 0; else if(newX < timeLimX + width) newX = timeLimX + width;
+  const onNumberLineScroll = (e) => {
+    const xScroll = numberLineRef.current?.scrollLeft;
+
+    var newX = xScroll;
+    timelineRef.current.scrollLeft = xScroll;
+
     setTimeX(newX);
-    setTimeYear(((-timeX + (width / 2)) / 100) + 1491.5);
+    setTimeYear(((timeX + width / 2) / 100) + 1491.5);
+    setTimeSinceScroll(0);
+  }
+
+  const onTimelineScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    const scrollRatio = scrollTop / (scrollHeight - clientHeight);
+    const xScroll = timelineRef.current?.scrollLeft;
+
+    var newX = xScroll;
+    numberLineRef.current.scrollLeft = xScroll;
+
+    setTimeX(newX);
+    setTimeYear(((timeX + width / 2) / 100) + 1491.5);
     setTimeSinceScroll(0);
   }
 
@@ -161,56 +181,36 @@ export default function Home({ states, onCompleted, onError }) {
       </div>
       
       {/* TIMELINE */}
-      <section className={utilStyles.timeline} onWheelCapture={onTimeXScroll}
-          style={{height:height - ((height - 64) * borderY)}}>
-        <div style={{position:"absolute",width:"100%",height:"100%",zIndex:100,
-            transform:`translate(${timeX}px, ${timeY}px) scale(${timeScale})`,
-            transformOrigin:"top left"}}>
+      <section className={`${utilStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
+          style={{height:height - ((height - 64) * borderY),width:"100%"}}>
+        <div style={{position:"absolute",width:timeLimX,height:"100%",zIndex:100,transformOrigin:"top left"}}>
 
-          thas some content type shit
+          TIMELINE SHIT
 
-        </div>
-
-        {/* MARKER LINE */}
-        <div style={{opacity:`${(timeSinceScroll < 300) ? 1 : ((timeSinceScroll > 350) ? 0.5 : ((timeSinceScroll - 400) / -100))}`}}
-            className={`${utilStyles.markerLine}`}>
-          
         </div>
       </section>
 
       {/* NUMBER LINE — YEARS */}
-      <section className={`${utilStyles.numberLine}`} onWheelCapture={onTimeXScroll}>
-        <div style={{transform:`translate(${timeX}px)`}}>
+      <section className={`${utilStyles.numberLine} ${utilStyles.scrollable}`} onScroll={onNumberLineScroll} ref={numberLineRef}>
+        <div style={{width:timeLimX}}>
           {[...Array(529)].map((e, i) => (
             <h2 style={{transform:`translate(${(i * 100) + 20}px, 0rem)`}}>
               {(i + 1492)}
             </h2>
           ))}
         </div>
-
-        {/* MARKERS */}
-        <div style={{opacity:`${(timeSinceScroll < 300) ? 1 : ((timeSinceScroll > 350) ? 0.5 : ((timeSinceScroll - 400) / -100))}`}}
-              className={`${utilStyles.markerYear}`}>
-          <div className={`${utilStyles.marker}`}>
-
-          </div>
-          <h3>
-            {DecimalYearToDate(timeYear)}
-          </h3>
-        </div>
-
-        {/* SCROLL */}
-        <DraggableCore onDrag={(e, data) => {
-            setTimeSinceScroll(0);
-            setTimeX((timeX + (data.deltaX * (timeLimX / width))) > 0 ? 0 : ((timeX + (data.deltaX * (timeLimX / width))) < timeLimX + width)
-                ? timeLimX + width: (timeX + (data.deltaX * (timeLimX / width))));
-            setTimeYear(((-timeX + (width / 2)) / 100) + 1491.5);
-            
-        }} onStop={() => {setTimeSinceScroll(1);}}>
-          <div className={`${utilStyles.scroll}`} style={{transform:`translate(${timeX / (timeLimX / width)}px)`}}></div>
-        </DraggableCore>
-        
       </section>
+
+      {/* MARKERS */}
+
+      <div style={{opacity:`${(timeSinceScroll < 300) ? 1 : ((timeSinceScroll > 350) ? 0.5 : ((timeSinceScroll - 400) / -100))}`}}
+            className={`${utilStyles.markerYear}`}>
+        <div style={{height:height - ((height - 64) * borderY)}} className={`${utilStyles.markerLine}`}></div>
+        <div className={utilStyles.marker}></div>
+        <h3>
+          {DecimalYearToDate(timeYear)}
+        </h3>
+      </div>
     </Layout>
   );
 }

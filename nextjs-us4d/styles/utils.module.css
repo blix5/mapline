@@ -186,11 +186,13 @@
   display: flex;
   flex-direction: row;
   position: relative;
-  overflow: hidden;
   width: 100%;
   background-color: #242530;
   justify-content: flex-start;
   align-items: center;
+
+  overflow-x: scroll;
+  overflow-y: scroll;
 
   filter: drop-shadow(0 0 0.5rem rgba(0,0,0,0.5));
   z-index: 110;
@@ -213,9 +215,34 @@
   height: 4rem;
   text-align: left;
   background-color: #434559;
-  overflow: hidden;
+
+  overflow-x: scroll;
+
   z-index: 120;
   filter: drop-shadow(0 0 0.4rem rgba(0,0,0,0.4));
+}
+
+.scrollable::-webkit-scrollbar {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+.scrollable::-webkit-scrollbar-button:start:decrement,
+.scrollable::-webkit-scrollbar-button:end:increment {
+  display: flex;
+  height: 0;
+  background-color: transparent;
+}
+.scrollable::-webkit-scrollbar-track-piece {
+  background-color: #ffffff;
+  opacity: 0.2;
+  display: none;
+}
+.scrollable::-webkit-scrollbar-thumb {
+  background-color: #9ea0a1;
+  -webkit-border-radius: 8px;
+  background-clip: padding-box;
+  border: 0.2rem solid transparent;
+  width: 5%;
 }
 
 .numberLine h2 {
@@ -230,30 +257,24 @@
   user-select: none;
 }
 
-.scroll {
+.markerYear {
   position: absolute;
-  background-color: #9ea0a1;
-  width: 3rem;
-  height: 0.4rem;
-  bottom: 0.3rem;
-  left: 0.3rem;
-  border-radius: 0.2rem;
-  z-index: 200;
+  bottom: 3.5rem;
+  pointer-events: none;
+  
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .markerLine {
   position: absolute;
-  left: calc(50vw - 0.2rem);
+  bottom: -7.5rem;
+  z-index: 110;
   width: 0.4rem;
-  height: 100%;
   background-color: rgba(238, 99, 82, 0.8);
-}
-
-.markerYear {
-  display: flex;
-  text-align: center;
-  justify-content: center;
-  align-items: center;
 }
 
 .markerYear h3 {
@@ -262,7 +283,7 @@
   font-size: 1rem;
   top: -0.5rem;
   color: #E9EAF3;
-  z-index: 300;
+  z-index: 150;
   background-color: rgba(197, 82, 67, 0.8);
   padding-left: 0.5rem;
   padding-right: 0.5rem;
@@ -280,4 +301,5 @@
   border-right: 0.3rem solid transparent;
   height: 0;
   width: 1rem;
+  z-index: 150;
 }
