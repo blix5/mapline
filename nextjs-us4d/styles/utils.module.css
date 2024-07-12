@@ -243,6 +243,7 @@
   background-clip: padding-box;
   border: 0.2rem solid transparent;
   width: 5%;
+  height: 20%;
 }
 
 .numberLine h2 {
@@ -302,4 +303,15 @@
   height: 0;
   width: 1rem;
   z-index: 150;
+}
+
+.event {
+  position: absolute;
+  height: calc(65px - 0.2rem);
+  z-index: 50;
+  color: white;
+  background-color: black;
+  width: 10rem;
+  overflow: hidden;
+  border-radius: 8px;
 }

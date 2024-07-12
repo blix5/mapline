@@ -38,3 +38,35 @@ export async function getStateList() {
     }
     return [];
 }
+
+export async function getTimeline() {
+    try {
+        const target = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
+        
+        const auth = new google.auth.JWT(
+            process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+            null,
+            (process.env.GOOGLE_SHEETS_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+            target
+        );
+
+        const sheets = google.sheets({ version: 'v4', auth });
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: process.env.SPREADSHEET_ID,
+            range: 'timeline',
+        });
+
+        const rows = response.data.values;
+        if(rows.length) {
+            return rows.map((row) => ({
+                id: row[0],
+                displayName: row[1],
+                startDate: row[2],
+                endDate: row[3]
+            }));
+        }
+    } catch(err) {
+        console.log(err);
+    }
+    return [];
+}

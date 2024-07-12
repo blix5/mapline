@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Date from '../components/date';
 
 import React from 'react';
-import { getStateList } from '../libs/sheets';
+import { getStateList, getTimeline } from '../libs/sheets';
 import State from '../libs/State';
 import Draggable, {DraggableCore} from 'react-draggable';
 import useWindowDimensions from '../components/useWindowDimensions';
@@ -16,15 +16,17 @@ import { parseAsFloat, useQueryState } from 'next-usequerystate';
 
 export async function getStaticProps(context) {
   const states = await getStateList();
+  const events = await getTimeline();
   return {
     props: {
       states: states.slice(1, states.length),
+      events: events.slice(1, 3/*events.length*/)
     },
     revalidate: 1,
   };
 }
 
-export default function Home({ states, onCompleted, onError }) {
+export default function Home({ states, events, onCompleted, onError }) {
   const mapLimX = 2400;
   const mapLimY = 1280;
 
@@ -42,16 +44,16 @@ export default function Home({ states, onCompleted, onError }) {
   const [timeX, setTimeX] = useQueryState('tpx', parseAsFloat.withDefault(0));
   const [timeY, setTimeY] = useQueryState('tpy', parseAsFloat.withDefault(0));
   const [timeScale, setTimeScale] = useQueryState('tps', parseAsFloat.withDefault(1));
-  const [timeYear, setTimeYear] = useQueryState('tyear', parseAsFloat.withDefault(1492))
+  const [timeYear, setTimeYear] = useQueryState('tyear', parseAsFloat.withDefault(1492));
 
   const numberLineRef = React.useRef(null);
   const timelineRef = React.useRef(null);
 
-  const [timeSinceScroll, setTimeSinceScroll] = React.useState(0);
+  const [scrolling, setScrolling] = React.useState(true);
   React.useEffect(() => {
-    const timer = setTimeout(() => (timeSinceScroll < 450) && setTimeSinceScroll(timeSinceScroll + 1), 10);
+    const timer = setTimeout(() => setScrolling(false), 3000);
     return () => clearTimeout(timer);
-  }, [timeSinceScroll]);
+  }, [scrolling]);
   
   const onMapScroll = (e) => {
     const delta = e.deltaY * -0.003;
@@ -93,20 +95,23 @@ export default function Home({ states, onCompleted, onError }) {
 
     setTimeX(newX);
     setTimeYear(((timeX + width / 2) / 100) + 1491.5);
-    setTimeSinceScroll(0);
+    setScrolling(true);
   }
 
   const onTimelineScroll = (e) => {
+    const xScroll = timelineRef.current?.scrollLeft;
+    const yScroll = timelineRef.current?.scrollTop;
     const { scrollTop, scrollHeight, clientHeight } = e.target;
     const scrollRatio = scrollTop / (scrollHeight - clientHeight);
-    const xScroll = timelineRef.current?.scrollLeft;
 
     var newX = xScroll;
+    var newY = yScroll;
     numberLineRef.current.scrollLeft = xScroll;
 
     setTimeX(newX);
+    setTimeY(newY);
     setTimeYear(((timeX + width / 2) / 100) + 1491.5);
-    setTimeSinceScroll(0);
+    setScrolling(true);
   }
 
   const convertDateToDecimal = (dateString) => {
@@ -115,6 +120,15 @@ export default function Home({ states, onCompleted, onError }) {
     const year = Number(String(dateString).substring(6, 10));
     return year + (month / 12) + (day / 365);
   }
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      timelineRef.current.scrollLeft = timeX;
+      timelineRef.current.scrollTop = timeY;
+      numberLineRef.current.scrollLeft = timeX;
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [timeX, timeY]);
 
   return (
     <Layout page="history">
@@ -182,10 +196,31 @@ export default function Home({ states, onCompleted, onError }) {
       
       {/* TIMELINE */}
       <section className={`${utilStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
-          style={{height:height - ((height - 64) * borderY),width:"100%"}}>
-        <div style={{position:"absolute",width:timeLimX,height:"100%",zIndex:100,transformOrigin:"top left"}}>
+          style={{height:`calc(${height - ((height - 64) * borderY)}px - 7rem)`,width:'100%'}}>
+        <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`,zIndex:100}}>
+          
+          {events.map((event, i) => (
+            <div key={event.id} style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - 1492) * 100) + 50}px), calc(0.2rem))`}} className={`${utilStyles.event}`}>
+              {event.displayName}
+            </div>
+          ))}
 
-          TIMELINE SHIT
+          {[...Array(529)].map((e, i) => (
+            (Math.abs((i * 100) - timeX) < width * 2) && (
+            <>
+              <div style={{transform:`translate(calc(${(i * 100) + 50}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+              <div style={{transform:`translate(calc(${(i * 100)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+              <div style={{transform:`translate(calc(${(i * 100) + 25}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+              <div style={{transform:`translate(calc(${(i * 100) + 75}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+            </>)
+          ))}
+
+          {[...Array(10)].map((e, i) => (
+            (Math.abs((i * 100) - timeY) < height * 2) && (
+            <>
+              <div style={{transform:`translate(0rem, calc(${(i * 65)}px))`,opacity:0.5,position:'absolute',width:'100%',height:'0.2rem',top:0,backgroundColor:'#76768B'}}></div>
+            </>)
+          ))}
 
         </div>
       </section>
@@ -194,20 +229,27 @@ export default function Home({ states, onCompleted, onError }) {
       <section className={`${utilStyles.numberLine} ${utilStyles.scrollable}`} onScroll={onNumberLineScroll} ref={numberLineRef}>
         <div style={{width:timeLimX}}>
           {[...Array(529)].map((e, i) => (
-            <h2 style={{transform:`translate(${(i * 100) + 20}px, 0rem)`}}>
-              {(i + 1492)}
-            </h2>
+            (Math.abs((i * 100) - timeX) < width * 2) && (
+              <>
+                <h2 style={{transform:`translate(${(i * 100) + 25}px, 0rem)`}}>
+                  {(i + 1492)}
+                </h2>
+                <div style={{transform:`translate(calc(${(i * 100) + 50}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'1rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                <div style={{transform:`translate(calc(${(i * 100)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.7rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                <div style={{transform:`translate(calc(${(i * 100) + 25}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                <div style={{transform:`translate(calc(${(i * 100) + 75}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+              </>
+            )
           ))}
         </div>
       </section>
 
       {/* MARKERS */}
 
-      <div style={{opacity:`${(timeSinceScroll < 300) ? 1 : ((timeSinceScroll > 350) ? 0.5 : ((timeSinceScroll - 400) / -100))}`}}
-            className={`${utilStyles.markerYear}`}>
-        <div style={{height:height - ((height - 64) * borderY)}} className={`${utilStyles.markerLine}`}></div>
-        <div className={utilStyles.marker}></div>
-        <h3>
+      <div className={`${utilStyles.markerYear}`}>
+        <div style={{height:height - ((height - 64) * borderY),opacity:`${scrolling ? 1 : 0.5}`,transition:`opacity ${scrolling ? 0.1 : 1}s`}} className={`${utilStyles.markerLine}`}></div>
+        <div style={{opacity:`${scrolling ? 1 : 0.5}`,transition:`opacity ${scrolling ? 0.1 : 1}s`}} className={utilStyles.marker}></div>
+        <h3 style={{opacity:`${scrolling ? 1 : 0.5}`,transition:`opacity ${scrolling ? 0.1 : 1}s`}}>
           {DecimalYearToDate(timeYear)}
         </h3>
       </div>
