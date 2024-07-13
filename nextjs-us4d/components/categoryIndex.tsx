@@ -18,14 +18,11 @@ const categoryToIndex = (category) => {
         case "court":
             index = 4;
             break;
-        case "trend":
+        case "period":
             index = 5;
             break;
-        case "period":
-            index = 6;
-            break;
         case "ruling":
-            index = 7;
+            index = 6;
             break;
         default:
             index = -1;

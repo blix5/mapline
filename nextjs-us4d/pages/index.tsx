@@ -15,6 +15,7 @@ import DecimalYearToDate from '../components/dateDecimal';
 import categoryToIndex from '../components/categoryIndex';
 
 import { parseAsFloat, useQueryState } from 'next-usequerystate';
+import styled from 'styled-components';
 
 export async function getStaticProps(context) {
   const states = await getStateList();
@@ -27,6 +28,14 @@ export async function getStaticProps(context) {
     revalidate: 1,
   };
 }
+
+const HoverVisibleDiv = styled.div<{ opacity: number, length: number }>`
+  opacity: ${(props) => props.opacity || 1};
+  &:hover {
+    opacity: 1;
+    width: calc(${(props) => ((props.length > 130) ? props.length : 130) || 200}px + 1rem);
+  }
+`;
 
 export default function Home({ states, events, onCompleted, onError }) {
   const startYear = 1750;
@@ -49,10 +58,14 @@ export default function Home({ states, events, onCompleted, onError }) {
   const mapLimY = 1280;
 
   const timeLimX = (endYear - startYear + 1) * timeScale;
-  const timeLimY = 2000;
+  const timeLimY = (65 * 7);
 
   const numberLineRef = React.useRef(null);
   const timelineRef = React.useRef(null);
+  const eventsRef = React.useRef<Array<HTMLDivElement | null>>([])
+  React.useEffect(() => {
+    eventsRef.current = eventsRef.current.slice(0, events.length);
+  }, [events]);
 
   const [scrolling, setScrolling] = React.useState(true);
   React.useEffect(() => {
@@ -201,16 +214,16 @@ export default function Home({ states, events, onCompleted, onError }) {
       
       {/* TIMELINE */}
       <section className={`${utilStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
-          style={{height:`calc(${height - ((height - 64) * borderY)}px - 7rem)`,width:'100%'}}>
+          style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%'}}>
         <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`,zIndex:100}}>
           
           {events.map((event, i) => (
-            <div key={event.id} style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),
-                  calc(${categoryToIndex(event.category) * 65}px + 0.2rem))`}} className={`${utilStyles.events} ${utilStyles[event.category]}`}>
-              <h6>{event.displayName}</h6>
+            <HoverVisibleDiv length={eventsRef.current[i]?.offsetWidth} opacity={(event.importance / 13) + 0.6} key={i} style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),
+                  calc(${categoryToIndex(event.category) * 65}px + 0.1rem))`}} className={`${utilStyles.events} ${utilStyles[event.category]}`}>
+              <h6 ref={el => eventsRef.current[i] = el}>{event.displayName}</h6>
               <p>{event.startDate}</p>
               <FilterIcon className={utilStyles.filterIcon} filter={event.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
-            </div>
+            </HoverVisibleDiv>
           ))}
 
           {[...Array(endYear - startYear + 1)].map((e, i) => (
@@ -223,10 +236,10 @@ export default function Home({ states, events, onCompleted, onError }) {
             </>)
           ))}
 
-          {[...Array(10)].map((e, i) => (
+          {[...Array(8)].map((e, i) => (
             (Math.abs((i * timeScale) - timeY) < height * 2) && (
             <>
-              <div style={{transform:`translate(0rem, calc(${(i * 65)}px))`,opacity:0.5,position:'absolute',width:'100%',height:'0.2rem',top:0,backgroundColor:'#76768B'}}></div>
+              <div style={{transform:`translate(0rem, calc(${(i * 65)}px - 0.1rem))`,opacity:0.5,position:'absolute',width:'100%',height:'0.2rem',top:0,backgroundColor:'#76768B'}}></div>
             </>)
           ))}
 

@@ -68,7 +68,8 @@ export async function getTimeline() {
                 endDate: row[6],
                 specEndDate: row[7],
                 location: row[8],
-                filter: row[9]
+                filter: row[9],
+                importance: row[10]
             }));
         }
     } catch(err) {
