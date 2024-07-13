@@ -61,8 +61,14 @@ export async function getTimeline() {
             return rows.map((row) => ({
                 id: row[0],
                 displayName: row[1],
-                startDate: row[2],
-                endDate: row[3]
+                fullName: row[2],
+                category: row[3],
+                startDate: row[4],
+                specStartDate: row[5],
+                endDate: row[6],
+                specEndDate: row[7],
+                location: row[8],
+                filter: row[9]
             }));
         }
     } catch(err) {

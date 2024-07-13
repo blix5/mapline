@@ -8,9 +8,11 @@ import Date from '../components/date';
 import React from 'react';
 import { getStateList, getTimeline } from '../libs/sheets';
 import State from '../libs/State';
+import FilterIcon from '../libs/FilterIcon';
 import Draggable, {DraggableCore} from 'react-draggable';
 import useWindowDimensions from '../components/useWindowDimensions';
 import DecimalYearToDate from '../components/dateDecimal';
+import categoryToIndex from '../components/categoryIndex';
 
 import { parseAsFloat, useQueryState } from 'next-usequerystate';
 
@@ -20,18 +22,15 @@ export async function getStaticProps(context) {
   return {
     props: {
       states: states.slice(1, states.length),
-      events: events.slice(1, 3/*events.length*/)
+      events: events.slice(1, events.length)
     },
     revalidate: 1,
   };
 }
 
 export default function Home({ states, events, onCompleted, onError }) {
-  const mapLimX = 2400;
-  const mapLimY = 1280;
-
-  const timeLimX = 52900;
-  const timeLimY = 2000;
+  const startYear = 1750;
+  const endYear = 2010;
 
   const [inHidden, setInHidden] = React.useState(-1);
   const { width, height } = useWindowDimensions();
@@ -43,8 +42,14 @@ export default function Home({ states, events, onCompleted, onError }) {
 
   const [timeX, setTimeX] = useQueryState('tpx', parseAsFloat.withDefault(0));
   const [timeY, setTimeY] = useQueryState('tpy', parseAsFloat.withDefault(0));
-  const [timeScale, setTimeScale] = useQueryState('tps', parseAsFloat.withDefault(1));
+  const [timeScale, setTimeScale] = useQueryState('tps', parseAsFloat.withDefault(100));
   const [timeYear, setTimeYear] = useQueryState('tyear', parseAsFloat.withDefault(1492));
+
+  const mapLimX = 2400;
+  const mapLimY = 1280;
+
+  const timeLimX = (endYear - startYear + 1) * timeScale;
+  const timeLimY = 2000;
 
   const numberLineRef = React.useRef(null);
   const timelineRef = React.useRef(null);
@@ -94,7 +99,7 @@ export default function Home({ states, events, onCompleted, onError }) {
     timelineRef.current.scrollLeft = xScroll;
 
     setTimeX(newX);
-    setTimeYear(((timeX + width / 2) / 100) + 1491.5);
+    setTimeYear(((timeX + width / 2) / 100) + (startYear - 0.5));
     setScrolling(true);
   }
 
@@ -110,7 +115,7 @@ export default function Home({ states, events, onCompleted, onError }) {
 
     setTimeX(newX);
     setTimeY(newY);
-    setTimeYear(((timeX + width / 2) / 100) + 1491.5);
+    setTimeYear(((timeX + width / 2) / 100) + (startYear - 0.5));
     setScrolling(true);
   }
 
@@ -200,23 +205,26 @@ export default function Home({ states, events, onCompleted, onError }) {
         <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`,zIndex:100}}>
           
           {events.map((event, i) => (
-            <div key={event.id} style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - 1492) * 100) + 50}px), calc(0.2rem))`}} className={`${utilStyles.event}`}>
-              {event.displayName}
+            <div key={event.id} style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),
+                  calc(${categoryToIndex(event.category) * 65}px + 0.2rem))`}} className={`${utilStyles.events} ${utilStyles[event.category]}`}>
+              <h6>{event.displayName}</h6>
+              <p>{event.startDate}</p>
+              <FilterIcon className={utilStyles.filterIcon} filter={event.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
             </div>
           ))}
 
-          {[...Array(529)].map((e, i) => (
-            (Math.abs((i * 100) - timeX) < width * 2) && (
+          {[...Array(endYear - startYear + 1)].map((e, i) => (
+            (Math.abs((i * timeScale) - timeX) < width * 2) && (
             <>
-              <div style={{transform:`translate(calc(${(i * 100) + 50}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-              <div style={{transform:`translate(calc(${(i * 100)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-              <div style={{transform:`translate(calc(${(i * 100) + 25}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-              <div style={{transform:`translate(calc(${(i * 100) + 75}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+              <div style={{transform:`translate(calc(${(i * timeScale) + 50}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+              <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+              <div style={{transform:`translate(calc(${(i * timeScale) + 25}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+              <div style={{transform:`translate(calc(${(i * timeScale) + 75}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
             </>)
           ))}
 
           {[...Array(10)].map((e, i) => (
-            (Math.abs((i * 100) - timeY) < height * 2) && (
+            (Math.abs((i * timeScale) - timeY) < height * 2) && (
             <>
               <div style={{transform:`translate(0rem, calc(${(i * 65)}px))`,opacity:0.5,position:'absolute',width:'100%',height:'0.2rem',top:0,backgroundColor:'#76768B'}}></div>
             </>)
@@ -228,16 +236,16 @@ export default function Home({ states, events, onCompleted, onError }) {
       {/* NUMBER LINE — YEARS */}
       <section className={`${utilStyles.numberLine} ${utilStyles.scrollable}`} onScroll={onNumberLineScroll} ref={numberLineRef}>
         <div style={{width:timeLimX}}>
-          {[...Array(529)].map((e, i) => (
-            (Math.abs((i * 100) - timeX) < width * 2) && (
+          {[...Array(endYear - startYear + 1)].map((e, i) => (
+            (Math.abs((i * timeScale) - timeX) < width * 2) && (
               <>
-                <h2 style={{transform:`translate(${(i * 100) + 25}px, 0rem)`}}>
-                  {(i + 1492)}
+                <h2 style={{transform:`translate(${(i * timeScale) + 25}px, 0rem)`}}>
+                  {(i + startYear)}
                 </h2>
-                <div style={{transform:`translate(calc(${(i * 100) + 50}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'1rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                <div style={{transform:`translate(calc(${(i * 100)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.7rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                <div style={{transform:`translate(calc(${(i * 100) + 25}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                <div style={{transform:`translate(calc(${(i * 100) + 75}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                <div style={{transform:`translate(calc(${(i * timeScale) + 50}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'1rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.7rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                <div style={{transform:`translate(calc(${(i * timeScale) + 25}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                <div style={{transform:`translate(calc(${(i * timeScale) + 75}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
               </>
             )
           ))}
