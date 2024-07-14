@@ -33,7 +33,7 @@ const HoverVisibleDiv = styled.div<{ opacity: number, length: number }>`
   opacity: ${(props) => props.opacity || 1};
   &:hover {
     opacity: 1;
-    width: calc(${(props) => ((props.length > 130) ? props.length : 130) || 200}px + 1rem);
+    width: calc(${(props) => props.length || 130}px + 1rem);
   }
 `;
 
@@ -218,7 +218,8 @@ export default function Home({ states, events, onCompleted, onError }) {
         <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`,zIndex:100}}>
           
           {events.map((event, i) => (
-            <HoverVisibleDiv length={eventsRef.current[i]?.offsetWidth} opacity={(event.importance / 13) + 0.6} key={i} style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),
+            <HoverVisibleDiv length={(eventsRef.current[i]?.offsetWidth < 130) ? 129 : eventsRef.current[i]?.offsetWidth} opacity={(event.importance / 9) + 0.4} key={i}
+                  style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),
                   calc(${categoryToIndex(event.category) * 65}px + 0.1rem))`}} className={`${utilStyles.events} ${utilStyles[event.category]}`}>
               <h6 ref={el => eventsRef.current[i] = el}>{event.displayName}</h6>
               <p>{event.startDate}</p>
