@@ -243,7 +243,7 @@ export default function Home({ states, events, onCompleted, onError }) {
                 </div>
                 {(event?.endDate) && (
                   <div style={{width:`calc(${(timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))) < 22 ? 22 : (timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate)))}px)`,
-                      position:'absolute',top:'-0.3rem',left:'-0.3rem',height:'calc(65px - 0.2rem)',borderTopLeftRadius:'0.6rem',borderTopRightRadius:'0.6rem',borderBottomLeftRadius:'0rem',borderBottomRightRadius:'0rem',overflow:'hidden'}}>
+                      position:'absolute',top:'-0.29rem',left:'-0.3rem',height:'calc(65px - 0.22rem)',borderTopLeftRadius:'0.6rem',borderTopRightRadius:'0.6rem',borderBottomLeftRadius:'0rem',borderBottomRightRadius:'0rem',overflow:'hidden'}}>
                     <div className={`${utilStyles[event.category + 'l']}`} style={{width:'100%',height:'0.25rem'}}></div>
                   </div>
                 )}
