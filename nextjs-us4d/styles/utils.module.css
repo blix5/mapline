@@ -275,7 +275,8 @@
   bottom: -7.5rem;
   z-index: 110;
   width: 0.4rem;
-  background-color: rgba(238, 99, 82, 0.8);
+  background-color: rgba(238, 99, 82, 0.5);
+  filter: drop-shadow(0 0 0.3rem rgba(0,0,0,0.8));
 }
 
 .markerYear h3 {
@@ -309,7 +310,7 @@
   position: absolute;
   height: calc(65px - 0.2rem);
   z-index: 50;
-  overflow: hidden;
+  overflow: visible;
   width: 7rem;
 
   border-radius: 0.6rem;
@@ -325,18 +326,35 @@
   font-size: 1.2rem;
   line-height: 70%;
 
-  transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out;
-  -moz-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out;
-  -ms-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out;
-  -webkit-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out;
+  transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
+  -moz-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
+  -ms-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
+  -webkit-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
+}
+.eventDiv:hover .eventsl {
+  opacity: 0.6;
+  transition: opacity 0.3s ease-out;
+  z-index: 51;
+}
+.eventDiv:hover .endDate {
+  opacity: 1;
+  position: relative;
+  display: flex;
+  animation-name: pulse;
+  animation-duration: 1s;
+  animation-timing-function: ease-out;
+}
+@keyframes pulse {
+  from {filter: brightness(2);}
+  to {filter: none;}
 }
 .events:hover {
   z-index: 300;
 
-  transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out;
-  -moz-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out;
-  -ms-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out;
-  -webkit-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out;
+  transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
+  -moz-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
+  -ms-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
+  -webkit-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
 }
 .events h6 {
   display: inline;
@@ -346,8 +364,25 @@
 }
 .events p {
   font-size: 0.7rem;
-  text-align: right;
   margin-right: 0.3rem;
+  float: right;
+}
+.eventsl {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0.2;
+  z-index: 49;
+  border-radius: 0.6rem;
+  border-top-left-radius: 0rem;
+  border-bottom-left-radius: 0rem;
+
+  transition: opacity 0.3s ease-out;
+}
+
+.endDate {
+  position: absolute;
+  opacity: 0;
 }
 
 .filterIcon {
@@ -364,17 +399,14 @@
   box-shadow: inset 0rem 25px #A38B31;
   color: #F7E38A;
 }
-.event p {
-  color: #A38B31;
-}
-.event .filterIcon {
-  fill: #A38B31;
-}
+.event p { color: #A38B31; }
+.event .filterIcon { fill: #A38B31; }
 .event:hover {
   box-shadow: none;
   border: 0.3rem solid #F7E38A;
   color: #A38B31;
 }
+.eventl { background-color: #A38B31; }
 
 .legislation {
   background-color: #B0E5A7;
@@ -382,17 +414,14 @@
   box-shadow: inset 0rem 25px #3E7B2E;
   color: #B0E5A7;
 }
-.legislation p {
-  color: #3E7B2E;
-}
-.legislation .filterIcon {
-  fill: #3E7B2E;
-}
+.legislation p { color: #3E7B2E; }
+.legislation .filterIcon { fill: #3E7B2E; }
 .legislation:hover {
   box-shadow: none;
   border: 0.3rem solid #B0E5A7;
   color: #3E7B2E;
 }
+.legislationl { background-color: #3E7B2E; }
 
 .foreign {
   background-color: #d79fe3;
@@ -400,17 +429,14 @@
   box-shadow: inset 0rem 25px #75337c;
   color: #d79fe3;
 }
-.foreign p {
-  color: #75337c;
-}
-.foreign .filterIcon {
-  fill: #75337c;
-}
+.foreign p { color: #75337c; }
+.foreign .filterIcon { fill: #75337c; }
 .foreign:hover {
   box-shadow: none;
   border: 0.3rem solid #d79fe3;
   color: #75337c;
 }
+.foreignl { background-color: #75337c; }
 
 .work {
   background-color: #8dced0;
@@ -418,14 +444,26 @@
   box-shadow: inset 0rem 25px #426263;
   color: #8dced0;
 }
-.work p {
-  color: #426263;
-}
-.work .filterIcon {
-  fill: #426263;
-}
+.work p { color: #426263; }
+.work .filterIcon { fill: #426263; }
 .work:hover {
   box-shadow: none;
   border: 0.3rem solid #8dced0;
   color: #426263;
 }
+.workl { background-color: #426263; }
+
+.ruling {
+  background-color: #d28b8b;
+  border: 0.3rem solid #853030;
+  box-shadow: inset 0rem 25px #853030;
+  color: #d28b8b;
+}
+.ruling p { color: #853030; }
+.ruling .filterIcon { fill: #853030; }
+.ruling:hover {
+  box-shadow: none;
+  border: 0.3rem solid #d28b8b;
+  color: #853030;
+}
+.rulingl { background-color: #853030; }

@@ -16,6 +16,7 @@ import categoryToIndex from '../components/categoryIndex';
 
 import { parseAsFloat, useQueryState } from 'next-usequerystate';
 import styled from 'styled-components';
+import dateFilterRender from '../components/dateFilterRender';
 
 export async function getStaticProps(context) {
   const states = await getStateList();
@@ -29,11 +30,15 @@ export async function getStaticProps(context) {
   };
 }
 
-const HoverVisibleDiv = styled.div<{ opacity: number, length: number }>`
+const HoverVisibleDiv = styled.div<{ opacity: number, length: number, corners: boolean }>`
   opacity: ${(props) => props.opacity || 1};
+  border-top-right-radius: ${(props) => props.corners ? 0 : 0.6}rem;
+  border-bottom-right-radius: ${(props) => props.corners ? 0 : 0.6}rem;
   &:hover {
     opacity: 1;
     width: calc(${(props) => props.length || 130}px + 1rem);
+    border-top-right-radius: 0.6rem;
+    border-bottom-right-radius: 0.6rem;
   }
 `;
 
@@ -214,17 +219,42 @@ export default function Home({ states, events, onCompleted, onError }) {
       
       {/* TIMELINE */}
       <section className={`${utilStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
-          style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%'}}>
-        <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`,zIndex:100}}>
-          
+          style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}}>
+        <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}}>
           {events.map((event, i) => (
-            <HoverVisibleDiv length={(eventsRef.current[i]?.offsetWidth < 130) ? 129 : eventsRef.current[i]?.offsetWidth} opacity={(event.importance / 9) + 0.4} key={i}
-                  style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),
-                  calc(${categoryToIndex(event.category) * 65}px + 0.1rem))`}} className={`${utilStyles.events} ${utilStyles[event.category]}`}>
-              <h6 ref={el => eventsRef.current[i] = el}>{event.displayName}</h6>
-              <p>{event.startDate}</p>
-              <FilterIcon className={utilStyles.filterIcon} filter={event.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
-            </HoverVisibleDiv>
+            <div style={{zIndex:50}} className={utilStyles.eventDiv}>
+              <HoverVisibleDiv length={(eventsRef.current[i]?.offsetWidth < (130 + (event?.endDate && 70))) ? (129 + (event?.endDate && 70)) : eventsRef.current[i]?.offsetWidth} opacity={(event.importance / 9) + 0.4} key={i}
+                    style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),
+                    calc(${categoryToIndex(event.category) * 65}px + 0.1rem))`}} corners={event?.endDate}
+                    className={`${utilStyles.events} ${utilStyles[event.category]}`}>
+                <div style={{overflow:'hidden'}}>
+                  <h6 ref={el => eventsRef.current[i] = el}>{event.displayName}</h6>
+                  <div style={{width:"100%",height:'2rem',overflow:'hidden'}}>
+                    {event?.endDate && (
+                      <p className={utilStyles.endDate}>
+                        {` – ${dateFilterRender(event.endDate, event.specEndDate)}`}
+                      </p>
+                    )}
+                    <p>
+                      {dateFilterRender(event.startDate, event.specStartDate)}
+                    </p>
+                  </div>
+                  <FilterIcon className={utilStyles.filterIcon} filter={event.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
+                </div>
+                {(event?.endDate) && (
+                  <div style={{width:`calc(${(timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))) < 22 ? 22 : (timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate)))}px)`,
+                      position:'absolute',top:'-0.3rem',left:'-0.3rem',height:'calc(65px - 0.2rem)',borderTopLeftRadius:'0.6rem',borderTopRightRadius:'0.6rem',borderBottomLeftRadius:'0rem',borderBottomRightRadius:'0rem',overflow:'hidden'}}>
+                    <div className={`${utilStyles[event.category + 'l']}`} style={{width:'100%',height:'0.25rem'}}></div>
+                  </div>
+                )}
+              </HoverVisibleDiv>
+              {(event?.endDate) && (
+                <>
+                  <div className={`${utilStyles.eventsl} ${utilStyles[event.category + 'l']}`} style={{width:`calc(${timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))}px - 7rem)`,
+                      height:'calc(65px - 0.2rem)',transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px + 7rem),calc(${categoryToIndex(event.category) * 65}px + 0.1rem))`}}></div>
+                </>
+              )}
+            </div>
           ))}
 
           {[...Array(endYear - startYear + 1)].map((e, i) => (
