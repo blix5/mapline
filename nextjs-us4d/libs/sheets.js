@@ -59,17 +59,18 @@ export async function getTimeline() {
         const rows = response.data.values;
         if(rows.length) {
             return rows.map((row) => ({
-                id: row[0],
-                displayName: row[1],
-                fullName: row[2],
-                category: row[3],
-                startDate: row[4],
-                specStartDate: row[5],
-                endDate: row[6],
-                specEndDate: row[7],
-                location: row[8],
-                filter: row[9],
-                importance: row[10]
+                id: row[0] ?? null,
+                displayName: row[1] ?? 'undefined',
+                fullName: row[2] ?? null,
+                category: row[3] ?? 'event',
+                startDate: row[4] ?? null,
+                specStartDate: row[5] ?? 'day',
+                endDate: row[6] ?? null,
+                specEndDate: row[7] ?? 'day',
+                location: row[8] ?? null,
+                filter: row[9] ?? null,
+                importance: row[10] ?? 5,
+                parent: row[11] ?? null
             }));
         }
     } catch(err) {

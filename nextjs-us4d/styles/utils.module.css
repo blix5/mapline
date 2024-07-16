@@ -311,7 +311,6 @@
   height: calc(65px - 0.2rem);
   z-index: 50;
   overflow: visible;
-  width: 7rem;
 
   border-radius: 0.6rem;
   box-sizing: border-box;
@@ -326,10 +325,10 @@
   font-size: 1.2rem;
   line-height: 70%;
 
-  transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
-  -moz-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
-  -ms-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
-  -webkit-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
+  transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out, pointer-events 0.3s ease-out, margin-top 0.3s ease-out;
+  -moz-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out, pointer-events 0.3s ease-out, margin-top 0.3s ease-out;
+  -ms-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out, pointer-events 0.3s ease-out, margin-top 0.3s ease-out;
+  -webkit-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out, pointer-events 0.3s ease-out, margin-top 0.3s ease-out;
 }
 .eventDiv:hover .eventsl {
   opacity: 0.6;
@@ -350,11 +349,6 @@
 }
 .events:hover {
   z-index: 300;
-
-  transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
-  -moz-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
-  -ms-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
-  -webkit-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out;
 }
 .events h6 {
   display: inline;
@@ -380,9 +374,30 @@
   transition: opacity 0.3s ease-out;
 }
 
+.parentExpand {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 1rem;
+  border-radius: 0.6rem;
+  transition: background-color 0.3s ease-out, filter 0.3s ease-out;
+}
+.parentExpand:hover {
+  filter: brightness(1.4);
+}
+
 .endDate {
   position: absolute;
   opacity: 0;
+}
+
+.arrow {
+  fill: white;
+  opacity: 0.8;
+  transition: transform 0.3s ease-out;
+  filter: drop-shadow(0 0 0.5rem rgba(0,0,0,1));
+
 }
 
 .filterIcon {
@@ -407,6 +422,7 @@
   color: #A38B31;
 }
 .eventl { background-color: #A38B31; }
+.eventDiv:hover .evente { background-color: #A38B31; }
 
 .legislation {
   background-color: #B0E5A7;
@@ -422,6 +438,7 @@
   color: #3E7B2E;
 }
 .legislationl { background-color: #3E7B2E; }
+.eventDiv:hover .legislatione { background-color: #3E7B2E; }
 
 .foreign {
   background-color: #d79fe3;
@@ -437,6 +454,7 @@
   color: #75337c;
 }
 .foreignl { background-color: #75337c; }
+.eventDiv:hover .foreigne { background-color: #75337c; }
 
 .work {
   background-color: #8dced0;
@@ -452,6 +470,7 @@
   color: #426263;
 }
 .workl { background-color: #426263; }
+.eventDiv:hover .worke { background-color: #426263; }
 
 .ruling {
   background-color: #d28b8b;
@@ -467,3 +486,4 @@
   color: #853030;
 }
 .rulingl { background-color: #853030; }
+.eventDiv:hover .rulinge { background-color: #853030; }

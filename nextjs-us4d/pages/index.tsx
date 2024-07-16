@@ -9,6 +9,7 @@ import React from 'react';
 import { getStateList, getTimeline } from '../libs/sheets';
 import State from '../libs/State';
 import FilterIcon from '../libs/FilterIcon';
+import Icon from '../libs/Icon';
 import Draggable, {DraggableCore} from 'react-draggable';
 import useWindowDimensions from '../components/useWindowDimensions';
 import DecimalYearToDate from '../components/dateDecimal';
@@ -30,15 +31,23 @@ export async function getStaticProps(context) {
   };
 }
 
-const HoverVisibleDiv = styled.div<{ opacity: number, length: number, corners: boolean }>`
-  opacity: ${(props) => props.opacity || 1};
-  border-top-right-radius: ${(props) => props.corners ? 0 : 0.6}rem;
-  border-bottom-right-radius: ${(props) => props.corners ? 0 : 0.6}rem;
+const HoverVisibleDiv = styled.div<{ $opacity: number, $length: number, $corners: boolean, $isParent: boolean, $isParentExpanded: boolean, $expanded: boolean, $isChild: boolean }>`
+  opacity: calc(${(props) => (props.$opacity || 1)} * ${(props) => (props.$expanded || false) ? 1 : 0});
+  pointer-events: ${(props) => (props.$expanded || false) ? '' : 'none'};
+  border-top-right-radius: ${(props) => (props.$corners || false) ? 0 : 0.6}rem;
+  border-bottom-right-radius: ${(props) => (props.$corners || false) ? 0 : 0.6}rem;
+  width: calc(6rem + ${(props) => (props.$isParent || false) ? 2 : 1}rem);
+  margin-top: ${(props) => (props.$isChild || false) ? ((props) => (props.$expanded) ? 0 : -0.5) : 0}rem;
+
   &:hover {
-    opacity: 1;
-    width: calc(${(props) => props.length || 130}px + 1rem);
+    opacity: calc(1 * ${(props) => (props.$expanded || false) ? 1 : 0});
+    width: calc(${(props) => props.$length || 130}px + ${(props) => (props.$isParent || false) ? 2 : 1}rem);
     border-top-right-radius: 0.6rem;
     border-bottom-right-radius: 0.6rem;
+  }
+
+  .arrow {
+    transform: rotate(${(props) => (props.$isParentExpanded || false) ? 180 : 0}deg);
   }
 `;
 
@@ -67,10 +76,31 @@ export default function Home({ states, events, onCompleted, onError }) {
 
   const numberLineRef = React.useRef(null);
   const timelineRef = React.useRef(null);
-  const eventsRef = React.useRef<Array<HTMLDivElement | null>>([])
+  const eventsRef = React.useRef<Array<HTMLDivElement | null>>([]);
   React.useEffect(() => {
     eventsRef.current = eventsRef.current.slice(0, events.length);
   }, [events]);
+  const [parents, setParents] = React.useState([]);
+  React.useEffect(() => {
+    const parentItems = events.map(event => event.parent).filter(parent => parent !== null && parent !== undefined);
+    const uniqueParentsSet = new Set(parentItems);
+    const uniqueParents = Array.from(uniqueParentsSet).map(parent => ({ parent, expanded: false }));
+    setParents(uniqueParents);
+  }, []);
+  const toggleParentSelection = (parentName) => {
+    setParents(prevParents =>
+      prevParents.map((event) =>
+        event.parent === parentName ? { ...event, expanded: !event.expanded } : event
+      )
+    );
+  }
+  const isParentSelected = (parent) => {
+    const parentObj = parents.find(p => p.parent === parent);
+    return parentObj ? parentObj.expanded : false;
+  }
+  const isListedAsParent = (id) => {
+    return parents.some(parent => parent.parent === id);
+  }
 
   const [scrolling, setScrolling] = React.useState(true);
   React.useEffect(() => {
@@ -117,7 +147,7 @@ export default function Home({ states, events, onCompleted, onError }) {
     timelineRef.current.scrollLeft = xScroll;
 
     setTimeX(newX);
-    setTimeYear(((timeX + width / 2) / 100) + (startYear - 0.5));
+    setTimeYear(((timeX + width / 2) / timeScale) + (startYear - 0.5));
     setScrolling(true);
   }
 
@@ -133,7 +163,7 @@ export default function Home({ states, events, onCompleted, onError }) {
 
     setTimeX(newX);
     setTimeY(newY);
-    setTimeYear(((timeX + width / 2) / 100) + (startYear - 0.5));
+    setTimeYear(((timeX + width / 2) / timeScale) + (startYear - 0.5));
     setScrolling(true);
   }
 
@@ -223,13 +253,16 @@ export default function Home({ states, events, onCompleted, onError }) {
         <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}}>
           {events.map((event, i) => (
             <div style={{zIndex:50}} className={utilStyles.eventDiv}>
-              <HoverVisibleDiv length={(eventsRef.current[i]?.offsetWidth < (130 + (event?.endDate && 70))) ? (129 + (event?.endDate && 70)) : eventsRef.current[i]?.offsetWidth} opacity={(event.importance / 9) + 0.4} key={i}
-                    style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),
-                    calc(${categoryToIndex(event.category) * 65}px + 0.1rem))`}} corners={event?.endDate}
+
+              <HoverVisibleDiv $length={(eventsRef.current[i]?.offsetWidth < (130 + (event?.endDate && 70))) ? (129 + (event?.endDate && 70)) : eventsRef.current[i]?.offsetWidth} $opacity={(event.importance / 9) + 0.4} 
+                    $isParent={isListedAsParent(event.id)} $expanded={(event?.parent ? (isParentSelected(event.parent)) : true)} $corners={event?.endDate} $isChild={event?.parent} $isParentExpanded={isParentSelected(event.id)} key={i}
+                    style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),calc(${categoryToIndex(event.category) * 65}px + ${event?.parent ? 0.5 : 0}rem + 0.1rem))`}}
                     className={`${utilStyles.events} ${utilStyles[event.category]}`}>
                 <div style={{overflow:'hidden'}}>
-                  <h6 ref={el => eventsRef.current[i] = el}>{event.displayName}</h6>
-                  <div style={{width:"100%",height:'2rem',overflow:'hidden'}}>
+                  <h6 ref={el => eventsRef.current[i] = el}>
+                    {event.displayName}
+                  </h6>
+                  <div style={{width:`calc(100% - ${isListedAsParent(event.id) ? 1 : 0}rem)`,height:'2rem',overflow:'hidden',right:`${isListedAsParent(event.id) ? 1 : 0}rem`,position:'absolute'}}>
                     {event?.endDate && (
                       <p className={utilStyles.endDate}>
                         {` – ${dateFilterRender(event.endDate, event.specEndDate)}`}
@@ -243,27 +276,36 @@ export default function Home({ states, events, onCompleted, onError }) {
                 </div>
                 {(event?.endDate) && (
                   <div style={{width:`calc(${(timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))) < 22 ? 22 : (timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate)))}px)`,
-                      position:'absolute',top:'-0.29rem',left:'-0.3rem',height:'calc(65px - 0.22rem)',borderTopLeftRadius:'0.6rem',borderTopRightRadius:'0.6rem',borderBottomLeftRadius:'0rem',borderBottomRightRadius:'0rem',overflow:'hidden'}}>
+                      position:'absolute',top:'-0.29rem',left:'-0.3rem',height:'calc(32px)',borderTopLeftRadius:'0.6rem',borderTopRightRadius:'0.6rem',borderBottomLeftRadius:'0rem',borderBottomRightRadius:'0rem',overflow:'hidden'}}>
                     <div className={`${utilStyles[event.category + 'l']}`} style={{width:'100%',height:'0.25rem'}}></div>
                   </div>
                 )}
+                {(isListedAsParent(event.id)) && (
+                  <div style={{}} className={`${utilStyles.parentExpand} ${utilStyles[event.category + 'e']}`} onClick={() => toggleParentSelection(event.id)}>
+                    <Icon className={`${utilStyles.arrow} arrow`} icon={"arrow"} onCompleted={onCompleted} onError={onError}>
+
+                    </Icon>
+                  </div>
+                )}
               </HoverVisibleDiv>
+
               {(event?.endDate) && (
                 <>
                   <div className={`${utilStyles.eventsl} ${utilStyles[event.category + 'l']}`} style={{width:`calc(${timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))}px - 7rem)`,
-                      height:'calc(65px - 0.2rem)',transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px + 7rem),calc(${categoryToIndex(event.category) * 65}px + 0.1rem))`}}></div>
+                      height:'calc(30px)',transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px + 7rem),calc(${categoryToIndex(event.category) * 65}px + 0.1rem))`}}></div>
                 </>
               )}
+
             </div>
           ))}
 
           {[...Array(endYear - startYear + 1)].map((e, i) => (
             (Math.abs((i * timeScale) - timeX) < width * 2) && (
             <>
-              <div style={{transform:`translate(calc(${(i * timeScale) + 50}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+              <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
               <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-              <div style={{transform:`translate(calc(${(i * timeScale) + 25}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-              <div style={{transform:`translate(calc(${(i * timeScale) + 75}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+              <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+              <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
             </>)
           ))}
 
@@ -286,10 +328,10 @@ export default function Home({ states, events, onCompleted, onError }) {
                 <h2 style={{transform:`translate(${(i * timeScale) + 25}px, 0rem)`}}>
                   {(i + startYear)}
                 </h2>
-                <div style={{transform:`translate(calc(${(i * timeScale) + 50}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'1rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'1rem',top:0,backgroundColor:'#E9EAF3'}}></div>
                 <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.7rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                <div style={{transform:`translate(calc(${(i * timeScale) + 25}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                <div style={{transform:`translate(calc(${(i * timeScale) + 75}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
               </>
             )
           ))}
