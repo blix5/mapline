@@ -282,7 +282,7 @@ export default function Home({ states, events, onCompleted, onError }) {
                 )}
                 {(isListedAsParent(event.id)) && (
                   <div style={{}} className={`${utilStyles.parentExpand} ${utilStyles[event.category + 'e']}`} onClick={() => toggleParentSelection(event.id)}>
-                    <Icon className={`${utilStyles.arrow} arrow`} icon={"arrow"} onCompleted={onCompleted} onError={onError}>
+                    <Icon className={`${utilStyles.arrow} arrow ${utilStyles[event.category + 'Arrow']}`} icon={"arrow"} onCompleted={onCompleted} onError={onError}>
 
                     </Icon>
                   </div>

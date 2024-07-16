@@ -377,14 +377,17 @@
 .parentExpand {
   position: absolute;
   right: 0;
-  top: 0;
-  height: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 2.5rem;
   width: 1rem;
   border-radius: 0.6rem;
-  transition: background-color 0.3s ease-out, filter 0.3s ease-out;
+  transition: background-color 0.3s ease-out, opacity 0.3s ease-out, filter 0.3s ease-out;
+  opacity: 0.5;
 }
 .parentExpand:hover {
-  filter: brightness(1.4);
+  opacity: 1;
+  filter: brightness(1.2);
 }
 
 .endDate {
@@ -394,10 +397,8 @@
 
 .arrow {
   fill: white;
-  opacity: 0.8;
   transition: transform 0.3s ease-out;
   filter: drop-shadow(0 0 0.5rem rgba(0,0,0,1));
-
 }
 
 .filterIcon {
@@ -423,6 +424,7 @@
 }
 .eventl { background-color: #A38B31; }
 .eventDiv:hover .evente { background-color: #A38B31; }
+.eventDiv:hover .eventArrow { fill: #F7E38A; }
 
 .legislation {
   background-color: #B0E5A7;
@@ -439,6 +441,7 @@
 }
 .legislationl { background-color: #3E7B2E; }
 .eventDiv:hover .legislatione { background-color: #3E7B2E; }
+.eventDiv:hover .legislationArrow { fill: #B0E5A7; }
 
 .foreign {
   background-color: #d79fe3;
@@ -455,6 +458,7 @@
 }
 .foreignl { background-color: #75337c; }
 .eventDiv:hover .foreigne { background-color: #75337c; }
+.eventDiv:hover .foreignArrow { fill: #d79fe3; }
 
 .work {
   background-color: #8dced0;
@@ -471,6 +475,7 @@
 }
 .workl { background-color: #426263; }
 .eventDiv:hover .worke { background-color: #426263; }
+.eventDiv:hover .workArrow { fill: #8dced0; }
 
 .ruling {
   background-color: #d28b8b;
@@ -487,3 +492,4 @@
 }
 .rulingl { background-color: #853030; }
 .eventDiv:hover .rulinge { background-color: #853030; }
+.eventDiv:hover .rulingArrow { fill: #d28b8b; }
