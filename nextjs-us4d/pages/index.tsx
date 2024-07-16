@@ -258,7 +258,7 @@ export default function Home({ states, events, onCompleted, onError }) {
                     $isParent={isListedAsParent(event.id)} $expanded={(event?.parent ? (isParentSelected(event.parent)) : true)} $corners={event?.endDate} $isChild={event?.parent} $isParentExpanded={isParentSelected(event.id)} key={i}
                     style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),calc(${categoryToIndex(event.category) * 65}px + ${event?.parent ? 0.5 : 0}rem + 0.1rem))`}}
                     className={`${utilStyles.events} ${utilStyles[event.category]}`}>
-                <div style={{overflow:'hidden'}}>
+                <div style={{overflow:'hidden',height:'2rem'}}>
                   <h6 ref={el => eventsRef.current[i] = el}>
                     {event.displayName}
                   </h6>

@@ -397,6 +397,7 @@
 
 .arrow {
   fill: white;
+  scale: 0.9;
   transition: transform 0.3s ease-out;
   filter: drop-shadow(0 0 0.5rem rgba(0,0,0,1));
 }
