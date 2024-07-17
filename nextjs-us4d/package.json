@@ -4,7 +4,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "NODE_OPTIONS='--max-old-space-size=2048' next dev",
     "build": "next build",
     "start": "next start"
   },
@@ -25,6 +25,7 @@
     "lodash.debounce": "^4.0.8",
     "next": "^14.0.2",
     "next-usequerystate": "^1.17.4",
+    "node": "^18.20.4",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-draggable": "^4.4.6",
@@ -36,6 +37,7 @@
     "remark-html": "^15.0.2",
     "request": "^2.79.0",
     "router-dom": "^2.2.11",
+    "sharp": "^0.33.4",
     "styled-components": "^6.1.11"
   },
   "devDependencies": {

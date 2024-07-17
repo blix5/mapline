@@ -26,7 +26,7 @@ export default function Layout({ children, page }) {
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
       <header className={styles.header}>
-        <Link className={`${styles.link} ${styles.logoContainer}`} href={page == "history" ? "javascript:void(0);" : "/"}>
+        <Link className={`${styles.link} ${styles.logoContainer}`} href={page == "history" ? "#0" : "/"}>
           <Image className={styles.logo}
             src="/images/logo_dark.png"
             height={300}
@@ -34,7 +34,7 @@ export default function Layout({ children, page }) {
             alt="MAPLINE"
           />
         </Link>
-        <Link className={styles.link} href={page == "history" ? "javascript:void(0);" : "/"}>
+        <Link className={styles.link} href={page == "history" ? "#0" : "/"}>
           <div className={`${styles.headButton} ${page == "history" && styles.selHeadButton}`}>
             HISTORY
             <svg className={`${styles.headUl} ${page == "history" && styles.selHeadUl}`} width="8rem" height="0.25rem">
@@ -42,7 +42,7 @@ export default function Layout({ children, page }) {
             </svg>
           </div>
         </Link>
-        <Link className={styles.link} href={page == "about" ? "javascript:void(0);" : "/about"}>
+        <Link className={styles.link} href={page == "about" ? "#0" : "/about"}>
           <div className={`${styles.headButton} ${page == "about" && styles.selHeadButton}`}>
             ABOUT
             <svg className={`${styles.headUl} ${page == "about" && styles.selHeadUl}`} width="8rem" height="0.25rem">
@@ -50,7 +50,7 @@ export default function Layout({ children, page }) {
             </svg>
           </div>
         </Link>
-        <Link className={styles.link} href={page == "sources" ? "javascript:void(0);" : "/sources"}>
+        <Link className={styles.link} href={page == "sources" ? "#0" : "/sources"}>
           <div className={`${styles.headButton} ${page == "sources" && styles.selHeadButton}`}>
             SOURCES
             <svg className={`${styles.headUl} ${page == "sources" && styles.selHeadUl}`} width="8rem" height="0.25rem">
