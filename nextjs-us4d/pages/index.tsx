@@ -31,29 +31,67 @@ export async function getStaticProps(context) {
   };
 }
 
-const HoverVisibleDiv = styled.div<{ $opacity: number, $length: number, $corners: boolean, $isParent: boolean, $isParentExpanded: boolean, $expanded: boolean, $isChild: boolean }>`
+const isEvenIndexInCategory = (event, events) => {
+  const categoryEvents = events.filter(e => e.category === event.category);
+  const eventIndex = categoryEvents.findIndex(e => e.id === event.id);
+  return eventIndex % 2 === 0;
+};
+
+const convertDateToDecimal = (dateString) => {
+  const month = Number(String(dateString).substring(0, 2));
+  const day = Number(String(dateString).substring(3, 5));
+  const year = Number(String(dateString).substring(6, 10));
+  return year + (month / 12) + (day / 365);
+}
+
+const HoverVisibleDiv = styled.div<{ $opacity: number, $length: number, $corners: boolean, $isParent: boolean, $expanded: boolean, $isChild: boolean, $translateX: number, $translateY: number, $isParentExpanded: boolean }>`
   opacity: calc(${(props) => (props.$opacity || 1)} * ${(props) => (props.$expanded || false) ? 1 : 0});
   pointer-events: ${(props) => (props.$expanded || false) ? '' : 'none'};
   border-top-right-radius: ${(props) => (props.$corners || false) ? 0 : 0.6}rem;
   border-bottom-right-radius: ${(props) => (props.$corners || false) ? 0 : 0.6}rem;
   width: calc(6rem + ${(props) => (props.$isParent || false) ? 2 : 1}rem);
-  margin-top: ${(props) => (props.$isChild || false) ? ((props) => (props.$expanded) ? 0 : -0.5) : 0}rem;
+  filter:blur(${(props) => (props.$isChild || false) ? ((props) => (props.$expanded || false) ? 0 : 0.2) : 0}rem)
+        drop-shadow(0 0 0.3rem rgba(0,0,0,0.5))
+        brightness(${(props) => (props.$isChild || false) ? 0.8 : 1});
+  transform:
+        translate(
+            calc(${(props) => (props.$translateX || 0)}px),
+            calc(${(props) => (props.$translateY || 0)}px + 0.1rem))
+        scale(${(props) => (props.$isChild || false) ? 0.8 : 1});
 
   &:hover {
     opacity: calc(1 * ${(props) => (props.$expanded || false) ? 1 : 0});
     width: calc(${(props) => props.$length || 130}px + ${(props) => (props.$isParent || false) ? 2 : 1}rem);
     border-top-right-radius: 0.6rem;
     border-bottom-right-radius: 0.6rem;
+    border-top-left-radius: 0.6rem;
+    filter:blur(${(props) => (props.$isChild || false) ? ((props) => (props.$expanded || false) ? 0 : 0.2) : 0}rem)
+          drop-shadow(0 0 0.3rem rgba(0,0,0,1))
+          brightness(1);
+    transform:
+        translate(
+            calc(${(props) => (props.$translateX || 0)}px),
+            calc(${(props) => (props.$translateY || 0)}px + 0.1rem))
+        scale(1);
+
+    .eventRange {
+      transform-origin: top left;
+      transform: scale(1);
+      border-top-left-radius: 0.6rem;
+    }
   }
 
-  .arrow {
-    transform: rotate(${(props) => (props.$isParentExpanded || false) ? 180 : 0}deg);
+  .eventRange {
+    transform-origin: top left;
+    transform: scale(${(props) => (props.$isChild || false) ? 1.25 : 1});
+    border-top-left-radius: ${(props) => (props.$isChild || false) ? 0 : 0.6}rem;
   }
+
 `;
 
 export default function Home({ states, events, onCompleted, onError }) {
   const startYear = 1750;
-  const endYear = 2010;
+  const endYear = 2020;
 
   const [inHidden, setInHidden] = React.useState(-1);
   const { width, height } = useWindowDimensions();
@@ -72,7 +110,7 @@ export default function Home({ states, events, onCompleted, onError }) {
   const mapLimY = 1280;
 
   const timeLimX = (endYear - startYear + 1) * timeScale;
-  const timeLimY = (65 * 7);
+  const timeLimY = (65 * (7 * 2));
 
   const numberLineRef = React.useRef(null);
   const timelineRef = React.useRef(null);
@@ -167,13 +205,6 @@ export default function Home({ states, events, onCompleted, onError }) {
     setScrolling(true);
   }
 
-  const convertDateToDecimal = (dateString) => {
-    const month = Number(String(dateString).substring(0, 2));
-    const day = Number(String(dateString).substring(3, 5));
-    const year = Number(String(dateString).substring(6, 10));
-    return year + (month / 12) + (day / 365);
-  }
-
   React.useEffect(() => {
     const timer = setTimeout(() => {
       timelineRef.current.scrollLeft = timeX;
@@ -240,24 +271,28 @@ export default function Home({ states, events, onCompleted, onError }) {
 
       {/* DRAG BORDER */}
 
-      <div style={{position:"absolute",top:"3.5rem",zIndex:150,width:"100%"}}>
-        <DraggableCore onDrag={(e, data) => {setBorderY(((data.y - 15) < ((height - 64) * 0.4)) ? 0.4 :
+      <div style={{position:"absolute",top:"3.75rem",zIndex:150,width:"100%"}}>
+        <DraggableCore onDrag={(e, data) => {setBorderY(((data.y - 15) < ((height - 64) * 0.25)) ? 0.25 :
             ((data.y - 15) > ((height - 64) * 0.75)) ? 0.75 : (data.y - 15) / (height - 64))}}>
-          <div style={{position:"relative",top:((height - 64) * borderY),width:"100%",height:20,cursor:'ns-resize'}}></div>
+          <div style={{position:"relative",top:((height - 64) * borderY),width:"100%",height:10,cursor:'ns-resize'}}></div>
         </DraggableCore>
       </div>
       
       {/* TIMELINE */}
+      <input type='range' value={timeScale} min={50} max={250} onCopy={(e) => e.preventDefault()} onCut={(e) => e.preventDefault()} onPaste={(e) => e.preventDefault()} onChange={(e) => setTimeScale(Number(e.target.value))} className={utilStyles.timeScale}
+          style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`100% ${100 - (((timeScale - 50) * 100) / 200)}%`}}/>
       <section className={`${utilStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
           style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}}>
         <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}}>
           {events.map((event, i) => (
             <div style={{zIndex:50}} className={utilStyles.eventDiv}>
 
-              <HoverVisibleDiv $length={(eventsRef.current[i]?.offsetWidth < (130 + (event?.endDate && 70))) ? (129 + (event?.endDate && 70)) : eventsRef.current[i]?.offsetWidth} $opacity={(event.importance / 9) + 0.4} 
-                    $isParent={isListedAsParent(event.id)} $expanded={(event?.parent ? (isParentSelected(event.parent)) : true)} $corners={event?.endDate} $isChild={event?.parent} $isParentExpanded={isParentSelected(event.id)} key={i}
-                    style={{transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),calc(${categoryToIndex(event.category) * 65}px + ${event?.parent ? 0.5 : 0}rem + 0.1rem))`}}
-                    className={`${utilStyles.events} ${utilStyles[event.category]}`}>
+              <HoverVisibleDiv $length={(eventsRef.current[i]?.offsetWidth < (130 + (event?.endDate && 70))) ? (129 + (event?.endDate && 70)) : (eventsRef.current[i]?.offsetWidth - 0.01)} $opacity={(event.importance / 9) + 0.4} 
+                    $isParent={isListedAsParent(event.id)} $expanded={(event?.parent ? (isParentSelected(event.parent)) : true)} $corners={event?.endDate} $isChild={event?.parent} 
+                    $translateX={((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40} $translateY={(categoryToIndex(event.category) * 65 * 2) + (isEvenIndexInCategory(event, events) ? 0 : 65)}
+                    $isParentExpanded={isParentSelected(event.id)} key={i}
+                    style={{marginTop:`${event?.parent ? (isParentSelected(event.parent) ? 0 : -0.5) : 0}rem`,marginLeft:`${isParentSelected(event.id) ? -130 : 0}px`}}
+                    className={`${utilStyles.events} ${utilStyles[event.category]} ${event?.parent && utilStyles.childEvent}`}>
                 <div style={{overflow:'hidden',height:'2rem'}}>
                   <h6 ref={el => eventsRef.current[i] = el}>
                     {event.displayName}
@@ -275,24 +310,28 @@ export default function Home({ states, events, onCompleted, onError }) {
                   <FilterIcon className={utilStyles.filterIcon} filter={event.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
                 </div>
                 {(event?.endDate) && (
-                  <div style={{width:`calc(${(timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))) < 22 ? 22 : (timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate)))}px)`,
-                      position:'absolute',top:'-0.29rem',left:'-0.3rem',height:'calc(32px)',borderTopLeftRadius:'0.6rem',borderTopRightRadius:'0.6rem',borderBottomLeftRadius:'0rem',borderBottomRightRadius:'0rem',overflow:'hidden'}}>
+                  <div style={{width:`calc(${(timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))) < 22 ? 22 : (timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate)))}px
+                          + ${isParentSelected(event.id) ? 130 : 0}px)`,
+                      position:'absolute',top:'-0.29rem',left:'-0.3rem',height:'calc(32px)',borderTopRightRadius:'0.6rem',borderBottomLeftRadius:'0rem',borderBottomRightRadius:'0rem',overflow:'hidden'}}
+                      className={`eventRange ${utilStyles.eventRange}`}>
                     <div className={`${utilStyles[event.category + 'l']}`} style={{width:'100%',height:'0.25rem'}}></div>
                   </div>
                 )}
                 {(isListedAsParent(event.id)) && (
                   <div style={{}} className={`${utilStyles.parentExpand} ${utilStyles[event.category + 'e']}`} onClick={() => toggleParentSelection(event.id)}>
-                    <Icon className={`${utilStyles.arrow} arrow ${utilStyles[event.category + 'Arrow']}`} icon={"arrow"} onCompleted={onCompleted} onError={onError}>
+                    <Icon className={`${utilStyles.arrow} ${utilStyles[event.category + 'Arrow']}`} icon={"arrow"} onCompleted={onCompleted} onError={onError}
+                        style={{transform:`rotate(${isParentSelected(event.id) ? 0 : 180}deg)`}}>
 
                     </Icon>
                   </div>
                 )}
               </HoverVisibleDiv>
 
-              {(event?.endDate) && (
+              {(event?.endDate && !(event?.parent && !isParentSelected(event.parent))) && (
                 <>
-                  <div className={`${utilStyles.eventsl} ${utilStyles[event.category + 'l']}`} style={{width:`calc(${timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))}px - 7rem)`,
-                      height:'calc(30px)',transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px + 7rem),calc(${categoryToIndex(event.category) * 65}px + 0.1rem))`}}></div>
+                  <div className={`${utilStyles.eventsl} ${utilStyles[event.category + 'l']}`} style={{width:`calc(${timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))}px - 0.6rem)`,
+                      height:'calc(30px)',transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px + 0.6rem),
+                      calc(${categoryToIndex(event.category) * 65 * 2}px + ${isEvenIndexInCategory(event, events) ? 0 : 65}px + 0.1rem))`}}></div>
                 </>
               )}
 
@@ -309,10 +348,10 @@ export default function Home({ states, events, onCompleted, onError }) {
             </>)
           ))}
 
-          {[...Array(8)].map((e, i) => (
+          {[...Array((7 * 2) + 1)].map((e, i) => (
             (Math.abs((i * timeScale) - timeY) < height * 2) && (
             <>
-              <div style={{transform:`translate(0rem, calc(${(i * 65)}px - 0.1rem))`,opacity:0.5,position:'absolute',width:'100%',height:'0.2rem',top:0,backgroundColor:'#76768B'}}></div>
+              <div style={{transform:`translate(0rem, calc(${(i * 65)}px - 0.1rem))`,opacity:`${i % 2 == 0 ? 0.5 : 0.15}`,position:'absolute',width:'100%',height:'0.2rem',top:0,backgroundColor:'#76768B'}}></div>
             </>)
           ))}
 
@@ -325,7 +364,7 @@ export default function Home({ states, events, onCompleted, onError }) {
           {[...Array(endYear - startYear + 1)].map((e, i) => (
             (Math.abs((i * timeScale) - timeX) < width * 2) && (
               <>
-                <h2 style={{transform:`translate(${(i * timeScale) + 25}px, 0rem)`}}>
+                <h2 style={{transform:`translate(${(i * timeScale)}px, 0rem)`,width:`${timeScale}px`,textAlign:'center'}}>
                   {(i + startYear)}
                 </h2>
                 <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'1rem',top:0,backgroundColor:'#E9EAF3'}}></div>

@@ -198,6 +198,42 @@
   z-index: 110;
 }
 
+.timeScale {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: #434559;
+  background-image: linear-gradient(#E9EAF3, #E9EAF3);
+  background-repeat: no-repeat;
+  position: absolute;
+  z-index: 150;
+  cursor: pointer;
+  height: 8rem;
+  width: 0.5rem;
+  border-radius: 0.25rem;
+  margin-top: 1.0rem;
+  margin-left: 0.8rem;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  vertical-align: bottom;
+  box-shadow: 0 0 0.8rem 0 rgba(0,0,0,0.5);
+}
+.timeScale::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 1rem;
+  width: 1rem;
+  background-color: #E9EAF3;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 0.3rem 0 rgba(0,0,0,0.5);
+}
+.timeScale::-webkit-slider-runnable-track {
+  -webkit-appearance: none;
+  appearance: none;
+  border: none;
+  background: transparent;
+}
+
 .ocean {
   background-color: #4B5B96;
 }
@@ -276,7 +312,7 @@
   z-index: 110;
   width: 0.4rem;
   background-color: rgba(238, 99, 82, 0.5);
-  filter: drop-shadow(0 0 0.3rem rgba(0,0,0,0.8));
+  filter: drop-shadow(0 0 0.3rem rgba(0,0,0,0.7));
 }
 
 .markerYear h3 {
@@ -291,6 +327,7 @@
   padding-right: 0.5rem;
   border: 0.2rem solid rgba(238, 99, 82, 0.8);
   border-radius: 1rem;
+  filter: drop-shadow(0 0 0.3rem rgba(0,0,0,0.7));
 
   -webkit-user-select: none;
   -ms-user-select: none;
@@ -316,7 +353,6 @@
   box-sizing: border-box;
   -moz-box-sizing: border-box;
   -webkit-box-sizing: border-box;
-  filter: drop-shadow(0 0 0.3rem rgba(0,0,0,0.5));
 
   -webkit-user-select: none;
   -ms-user-select: none;
@@ -325,14 +361,21 @@
   font-size: 1.2rem;
   line-height: 70%;
 
-  transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out, pointer-events 0.3s ease-out, margin-top 0.3s ease-out;
-  -moz-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out, pointer-events 0.3s ease-out, margin-top 0.3s ease-out;
-  -ms-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out, pointer-events 0.3s ease-out, margin-top 0.3s ease-out;
-  -webkit-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out, pointer-events 0.3s ease-out, margin-top 0.3s ease-out;
+  transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
+        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, transform 0.3s ease-out;
+  -moz-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
+        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, transform 0.3s ease-out;
+  -ms-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
+        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, transform 0.3s ease-out;
+  -webkit-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
+        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, transform 0.3s ease-out;
 }
 .eventDiv:hover .eventsl {
   opacity: 0.6;
   transition: opacity 0.3s ease-out;
+  -moz-transition: opacity 0.3s ease-out;
+  -ms-transition: opacity 0.3s ease-out;
+  -webkit-transition: opacity 0.3s ease-out;
   z-index: 51;
 }
 .eventDiv:hover .endDate {
@@ -370,8 +413,24 @@
   border-radius: 0.6rem;
   border-top-left-radius: 0rem;
   border-bottom-left-radius: 0rem;
+  pointer-events: none;
 
   transition: opacity 0.3s ease-out;
+  -moz-transition: opacity 0.3s ease-out;
+  -ms-transition: opacity 0.3s ease-out;
+  -webkit-transition: opacity 0.3s ease-out;
+}
+
+.eventRange {
+  transition: width 0.5s ease-out, transform 0.3s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
+  -moz-transition: width 0.5s ease-out, transform 0.3s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
+  -ms-transition: width 0.5s ease-out, transform 0.3s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
+  -webkit-transition: width 0.5s ease-out, transform 0.3s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
+}
+
+.childEvent {
+  border-top-left-radius: 0rem;
+  transform-origin: top left;
 }
 
 .parentExpand {
@@ -383,6 +442,9 @@
   width: 1rem;
   border-radius: 0.6rem;
   transition: background-color 0.3s ease-out, opacity 0.3s ease-out, filter 0.3s ease-out;
+  -moz-transition: background-color 0.3s ease-out, opacity 0.3s ease-out, filter 0.3s ease-out;
+  -ms-transition: background-color 0.3s ease-out, opacity 0.3s ease-out, filter 0.3s ease-out;
+  -webkit-transition: background-color 0.3s ease-out, opacity 0.3s ease-out, filter 0.3s ease-out;
   opacity: 0.5;
 }
 .parentExpand:hover {
@@ -399,6 +461,9 @@
   fill: white;
   scale: 0.9;
   transition: transform 0.3s ease-out;
+  -moz-transition: transform 0.3s ease-out;
+  -ms-transition: transform 0.3s ease-out;
+  -webkit-transition: transform 0.3s ease-out;
   filter: drop-shadow(0 0 0.5rem rgba(0,0,0,1));
 }
 
