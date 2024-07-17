@@ -217,6 +217,9 @@
   vertical-align: bottom;
   box-shadow: 0 0 0.8rem 0 rgba(0,0,0,0.5);
 }
+.timeScale:focus {
+  outline: none;
+}
 .timeScale::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -411,8 +414,6 @@
   opacity: 0.2;
   z-index: 49;
   border-radius: 0.6rem;
-  border-top-left-radius: 0rem;
-  border-bottom-left-radius: 0rem;
   pointer-events: none;
 
   transition: opacity 0.3s ease-out;

@@ -95,7 +95,7 @@ export default function Home({ states, events, onCompleted, onError }) {
 
   const [inHidden, setInHidden] = React.useState(-1);
   const { width, height } = useWindowDimensions();
-  const [borderY, setBorderY] = React.useState(0.6);
+  const [borderY, setBorderY] = useQueryState('div', parseAsFloat.withDefault(0.6));
 
   const [mapX, setMapX] = useQueryState('mpx', parseAsFloat.withDefault(-1450));
   const [mapY, setMapY] = useQueryState('mpy', parseAsFloat.withDefault(-275));
@@ -104,7 +104,7 @@ export default function Home({ states, events, onCompleted, onError }) {
   const [timeX, setTimeX] = useQueryState('tpx', parseAsFloat.withDefault(0));
   const [timeY, setTimeY] = useQueryState('tpy', parseAsFloat.withDefault(0));
   const [timeScale, setTimeScale] = useQueryState('tps', parseAsFloat.withDefault(100));
-  const [timeYear, setTimeYear] = useQueryState('tyear', parseAsFloat.withDefault(1492));
+  const [timeYear, setTimeYear] = useQueryState('year', parseAsFloat.withDefault(1492));
 
   const mapLimX = 2400;
   const mapLimY = 1280;
@@ -279,7 +279,7 @@ export default function Home({ states, events, onCompleted, onError }) {
       </div>
       
       {/* TIMELINE */}
-      <input type='range' value={timeScale} min={50} max={250} onCopy={(e) => e.preventDefault()} onCut={(e) => e.preventDefault()} onPaste={(e) => e.preventDefault()} onChange={(e) => setTimeScale(Number(e.target.value))} className={utilStyles.timeScale}
+      <input type='range' value={timeScale} min={50} max={250} onChange={(e) => setTimeScale(Number(e.target.value))} className={utilStyles.timeScale}
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`100% ${100 - (((timeScale - 50) * 100) / 200)}%`}}/>
       <section className={`${utilStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
           style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}}>
@@ -329,8 +329,8 @@ export default function Home({ states, events, onCompleted, onError }) {
 
               {(event?.endDate && !(event?.parent && !isParentSelected(event.parent))) && (
                 <>
-                  <div className={`${utilStyles.eventsl} ${utilStyles[event.category + 'l']}`} style={{width:`calc(${timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))}px - 0.6rem)`,
-                      height:'calc(30px)',transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px + 0.6rem),
+                  <div className={`${utilStyles.eventsl} ${utilStyles[event.category + 'l']}`} style={{width:`calc(${timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))}px)`,
+                      height:'calc(30px)',transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),
                       calc(${categoryToIndex(event.category) * 65 * 2}px + ${isEvenIndexInCategory(event, events) ? 0 : 65}px + 0.1rem))`}}></div>
                 </>
               )}
