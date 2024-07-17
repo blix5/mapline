@@ -205,6 +205,13 @@ export default function Home({ states, events, onCompleted, onError }) {
     setScrolling(true);
   }
 
+  const onTimelineZoom = (value) => {
+    const oldTimeX = (timeYear - (startYear - 0.5)) * value - (width / 2)
+    setTimeX(oldTimeX);
+    setTimeScale(value);
+    setScrolling(true);
+  }
+
   React.useEffect(() => {
     const timer = setTimeout(() => {
       timelineRef.current.scrollLeft = timeX;
@@ -279,7 +286,7 @@ export default function Home({ states, events, onCompleted, onError }) {
       </div>
       
       {/* TIMELINE */}
-      <input type='range' value={timeScale} min={50} max={250} onChange={(e) => setTimeScale(Number(e.target.value))} className={utilStyles.timeScale}
+      <input type='range' value={timeScale} min={50} max={250} onChange={(e) => onTimelineZoom(Number(e.target.value))} className={utilStyles.timeScale}
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`100% ${100 - (((timeScale - 50) * 100) / 200)}%`}}/>
       <section className={`${utilStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
           style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}}>
