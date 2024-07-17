@@ -1,5 +1,5 @@
 import React from 'react';
-import useDynamicStateImport from '../libs/useDynamicStateImport';
+import useDynamicStateImport from './useDynamicStateImport';
 
 export default function State({ name, onCompleted, onError, ...rest }) {
     const { error, loading, SvgIcon } = useDynamicStateImport(name, { onCompleted, onError });

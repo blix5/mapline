@@ -4,7 +4,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "dev": "NODE_OPTIONS='--max-old-space-size=2048' next dev",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start"
   },

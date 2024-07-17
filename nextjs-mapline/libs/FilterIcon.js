@@ -1,5 +1,5 @@
 import React from 'react';
-import useDynamicFilterImport from '../libs/useDynamicFilterImport';
+import useDynamicFilterImport from './useDynamicFilterImport';
 
 export default function FilterIcon({ filter, onCompleted, onError, ...rest }) {
     const { error, loading, SvgIcon } = useDynamicFilterImport(filter, { onCompleted, onError });

@@ -1,5 +1,5 @@
 import React from 'react';
-import useDynamicIconImport from '../libs/useDynamicIconImport';
+import useDynamicIconImport from './useDynamicIconImport';
 
 export default function Icon({ icon, onCompleted, onError, ...rest }) {
     const { error, loading, SvgIcon } = useDynamicIconImport(icon, { onCompleted, onError });
