@@ -365,13 +365,13 @@
   line-height: 70%;
 
   transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
-        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, transform 0.3s ease-out;
+        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out;
   -moz-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
-        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, transform 0.3s ease-out;
+        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out;
   -ms-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
-        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, transform 0.3s ease-out;
+        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out;
   -webkit-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
-        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, transform 0.3s ease-out;
+        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out;
 }
 .eventDiv:hover .eventsl {
   opacity: 0.6;
@@ -423,10 +423,10 @@
 }
 
 .eventRange {
-  transition: width 0.5s ease-out, transform 0.3s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
-  -moz-transition: width 0.5s ease-out, transform 0.3s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
-  -ms-transition: width 0.5s ease-out, transform 0.3s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
-  -webkit-transition: width 0.5s ease-out, transform 0.3s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
+  transition: width 0.5s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
+  -moz-transition: width 0.5s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
+  -ms-transition: width 0.5s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
+  -webkit-transition: width 0.5s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
 }
 
 .childEvent {

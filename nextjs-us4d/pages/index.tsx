@@ -68,16 +68,9 @@ const HoverVisibleDiv = styled.div<{ $opacity: number, $length: number, $corners
     filter:blur(${(props) => (props.$isChild || false) ? ((props) => (props.$expanded || false) ? 0 : 0.2) : 0}rem)
           drop-shadow(0 0 0.3rem rgba(0,0,0,1))
           brightness(1);
-    transform:
-        translate(
-            calc(${(props) => (props.$translateX || 0)}px),
-            calc(${(props) => (props.$translateY || 0)}px + 0.1rem))
-        scale(1);
 
     .eventRange {
-      transform-origin: top left;
-      transform: scale(1);
-      border-top-left-radius: 0.6rem;
+      border-top-left-radius: 0.5rem;
     }
   }
 
@@ -206,9 +199,16 @@ export default function Home({ states, events, onCompleted, onError }) {
   }
 
   const onTimelineZoom = (value) => {
-    const oldTimeX = (timeYear - (startYear - 0.5)) * value - (width / 2)
-    setTimeX(oldTimeX);
+    const xTime = (timeX + (width / 2)) / timeScale;
+
     setTimeScale(value);
+
+    const newX =( xTime * value) - (width / 2);
+
+    numberLineRef.current.scrollLeft = newX;
+    timelineRef.current.scrollLeft = newX;
+
+    setTimeX(newX);
     setScrolling(true);
   }
 
@@ -296,7 +296,7 @@ export default function Home({ states, events, onCompleted, onError }) {
 
               <HoverVisibleDiv $length={(eventsRef.current[i]?.offsetWidth < (130 + (event?.endDate && 70))) ? (129 + (event?.endDate && 70)) : (eventsRef.current[i]?.offsetWidth - 0.01)} $opacity={(event.importance / 9) + 0.4} 
                     $isParent={isListedAsParent(event.id)} $expanded={(event?.parent ? (isParentSelected(event.parent)) : true)} $corners={event?.endDate} $isChild={event?.parent} 
-                    $translateX={((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40} $translateY={(categoryToIndex(event.category) * 65 * 2) + (isEvenIndexInCategory(event, events) ? 0 : 65)}
+                    $translateX={((convertDateToDecimal(event.startDate) - startYear) * timeScale) + (timeScale * 0.4)} $translateY={(categoryToIndex(event.category) * 65 * 2) + (isEvenIndexInCategory(event, events) ? 0 : 65)}
                     $isParentExpanded={isParentSelected(event.id)} key={i}
                     style={{marginTop:`${event?.parent ? (isParentSelected(event.parent) ? 0 : -0.5) : 0}rem`,marginLeft:`${isParentSelected(event.id) ? -130 : 0}px`}}
                     className={`${utilStyles.events} ${utilStyles[event.category]} ${event?.parent && utilStyles.childEvent}`}>
@@ -337,7 +337,7 @@ export default function Home({ states, events, onCompleted, onError }) {
               {(event?.endDate && !(event?.parent && !isParentSelected(event.parent))) && (
                 <>
                   <div className={`${utilStyles.eventsl} ${utilStyles[event.category + 'l']}`} style={{width:`calc(${timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))}px)`,
-                      height:'calc(30px)',transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + 40}px),
+                      height:'calc(30px)',transform:`translate(calc(${((convertDateToDecimal(event.startDate) - startYear) * timeScale) + (timeScale * 0.4)}px),
                       calc(${categoryToIndex(event.category) * 65 * 2}px + ${isEvenIndexInCategory(event, events) ? 0 : 65}px + 0.1rem))`}}></div>
                 </>
               )}
