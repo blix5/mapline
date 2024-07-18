@@ -3,6 +3,7 @@
   padding: 0 0.5rem;
   display: flex;
   flex-direction: column;
+  -ms-flex-direction: column;
   justify-content: center;
   align-items: center;
 }
@@ -44,6 +45,7 @@
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
+  -ms-flex-wrap: wrap;
 
   max-width: 800px;
   margin-top: 3rem;
@@ -58,6 +60,7 @@
   text-decoration: none;
   border: 1px solid #eaeaea;
   border-radius: 10px;
+
   transition: color 0.15s ease, border-color 0.15s ease;
   -moz-transition: color 0.15s ease, border-color 0.15s ease;
   -ms-transition: color 0.15s ease, border-color 0.15s ease;
@@ -90,5 +93,6 @@
   .grid {
     width: 100%;
     flex-direction: column;
+    -ms-flex-direction: column;
   }
 }

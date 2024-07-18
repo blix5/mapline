@@ -1,0 +1,44 @@
+.map {
+    display: flex;
+    flex-direction: row;
+    -ms-flex-direction: row;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    justify-content: flex-start;
+    align-items: center;
+    background-color: #4B5B96;
+}
+
+.map * {
+    position: absolute;
+    top: 0;
+    left: 0;
+    zoom: 1;
+    -ms-zoom: 1;
+}
+
+.map path {
+    pointer-events: auto;
+    z-index: 1;
+}
+
+.ocean {
+    background-color: #4B5B96;
+}
+
+.mapShadow {
+    background-color: #4B5B96;
+    position: absolute;
+    box-shadow: 0 0 70px 100px #4B5B96;
+}
+
+.compass {
+    position: absolute;
+    left: 1rem;
+    z-index: 110;
+    pointer-events: none;
+    
+    filter: drop-shadow(0 0 0.5rem rgba(0,0,0,0.5));
+    -webkit-filter: drop-shadow(0 0 0.5rem rgba(0,0,0,0.5));
+}

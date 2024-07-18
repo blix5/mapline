@@ -22,7 +22,7 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx"
-, "libs/useDynamicFilterImport.js", "libs/useDynamicFilterImport.js"  ],
+  ],
   "exclude": [
     "node_modules"
   ]
