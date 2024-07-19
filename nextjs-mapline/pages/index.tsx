@@ -1,12 +1,12 @@
 import React from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
-import Link from 'next/link';
+import ReactLink from 'next/link';
 
 import Draggable, {DraggableCore} from 'react-draggable';
 import { parseAsFloat, useQueryState } from 'next-usequerystate';
 import styled from 'styled-components';
-
+import { Link, Button, Element, Events, animateScroll as scroll, scrollSpy } from 'react-scroll';
 
 import Date from '../components/date';
 import useWindowDimensions from '../components/useWindowDimensions';
@@ -46,7 +46,7 @@ export async function getStaticProps(context) {
 }
 
 const isEvenIndexInCategory = (event, events) => {
-  const categoryEvents = events.filter(e => e.category === event.category);
+  const categoryEvents = events.filter(e => e.category === event.category && (e?.parent === event?.parent));
   const eventIndex = categoryEvents.findIndex(e => e.id === event.id);
   return eventIndex % 2 === 0;
 };
@@ -57,7 +57,6 @@ const convertDateToDecimal = (dateString) => {
   const year = Number(String(dateString).substring(6, 10));
   return year + (month / 12) + (day / 365);
 }
-
 
 
 export default function Home({ states, events, onCompleted, onError }) {
@@ -86,6 +85,7 @@ export default function Home({ states, events, onCompleted, onError }) {
   const numberLineRef = React.useRef(null);
   const timelineRef = React.useRef(null);
   const eventsRef = React.useRef<Array<HTMLDivElement | null>>([]);
+  const [eventSelected, setEventSelected] = React.useState(null);
   React.useEffect(() => {
     eventsRef.current = eventsRef.current.slice(0, events.length);
   }, [events]);
@@ -135,8 +135,21 @@ export default function Home({ states, events, onCompleted, onError }) {
       setMapY(newY);
       setMapScale(newScale);
     }
-    
   };
+
+  React.useEffect(() => {
+    Events.scrollEvent.register('begin', (to, element) => {
+      console.log('begin', to, element);
+    });
+    Events.scrollEvent.register('end', (to, element) => {
+      console.log('end', to, element);
+    });
+    scrollSpy.update();
+    return () => {
+      Events.scrollEvent.remove('begin');
+      Events.scrollEvent.remove('end');
+    };
+  }, []);
 
   const onMapDrag = (data) => {
     const mapHeight = (height - 64) * borderY;
@@ -188,6 +201,16 @@ export default function Home({ states, events, onCompleted, onError }) {
 
     setTimeX(newX);
     setScrolling(true);
+  }
+
+  const eventClick = (event, timeX = 0, timeY = 0) => {
+    if(event?.id) {
+      scroll.scrollTo(timeX - width / 2, { smooth: true, containerId: 'timeline', duration: 500, horizontal: true });
+      scroll.scrollTo(timeY, { smooth: true, containerId: 'timeline', duration: 500, horizontal: false })
+      setEventSelected(event.id);
+    } else {
+      setEventSelected(null);
+    }
   }
 
   React.useEffect(() => {
@@ -262,18 +285,19 @@ export default function Home({ states, events, onCompleted, onError }) {
       {/* TIMELINE */}
       <input type='range' value={timeScale} min={50} max={250} onChange={(e) => onTimelineZoom(Number(e.target.value))} className={timelineStyles.timeScale}
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`${((timeScale - 50) * 100) / 200}% 100%`,width:`${0.25 * (height - ((height - 64) * borderY))}px`}}/>
-      <section className={`${timelineStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
+      <section id={`timeline`} className={`${timelineStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
           style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}}>
-        <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}}>
+        <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}} onClick={() => eventClick(null)}>
           {events.map((event, i) => (
-            <div style={{zIndex:50}} className={timelineStyles.eventDiv}>
+            <div style={{zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>
 
               <HoverVisibleDiv $length={(eventsRef.current[i]?.offsetWidth < (130 + (event?.endDate && 70))) ? (129 + (event?.endDate && 70)) : (eventsRef.current[i]?.offsetWidth - 0.01)} $opacity={(event.importance / 9) + 0.4} 
                     $isParent={isListedAsParent(event.id)} $expanded={(event?.parent ? (isParentSelected(event.parent)) : true)} $corners={event?.endDate} $isChild={event?.parent} 
                     $translateX={((convertDateToDecimal(event.startDate) - startYear) * timeScale) + (timeScale * 0.4)} $translateY={(categoryToIndex(event.category) * 65 * 2) + (isEvenIndexInCategory(event, events) ? 0 : 65)}
-                    $isParentExpanded={isParentSelected(event.id)} key={i}
-                    style={{marginTop:`${event?.parent ? (isParentSelected(event.parent) ? 0 : -0.5) : 0}rem`,marginLeft:`${isParentSelected(event.id) ? -130 : 0}px`}}
-                    className={`${timelineStyles.events} ${timelineStyles[event.category]} ${event?.parent && timelineStyles.childEvent}`}>
+                    $isParentExpanded={isParentSelected(event.id)} $isSelected={eventSelected == event.id} key={i} id={event.id} onClick={(e) => eventClick(event, ((convertDateToDecimal(event.startDate) - startYear) * timeScale) + (timeScale * 0.4),
+                      (categoryToIndex(event.category) * 65 * 2) + (isEvenIndexInCategory(event, events) ? 0 : 65) - ((height - ((height - 64) * borderY) - 200) / 2))}
+                    style={{marginTop:`${event?.parent ? (isParentSelected(event.parent) ? 0 : -0.5) : 0}rem`}}
+                    className={`${timelineStyles.events} ${timelineStyles[event.category]} ${event?.parent && timelineStyles.childEvent} ${event.id == eventSelected && timelineStyles.selectedEvent}`}>
                 <div style={{overflow:'hidden',height:'2rem'}}>
                   <h6 ref={el => eventsRef.current[i] = el}>
                     {event.displayName}
@@ -291,15 +315,14 @@ export default function Home({ states, events, onCompleted, onError }) {
                   <FilterIcon className={timelineStyles.filterIcon} filter={event.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
                 </div>
                 {(event?.endDate) && (
-                  <div style={{width:`calc(${(timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))) < 22 ? 22 : (timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate)))}px
-                          + ${isParentSelected(event.id) ? 130 : 0}px)`,
+                  <div style={{width:`calc(${(timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))) < 22 ? 22 : (timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate)))}px)`,
                       position:'absolute',top:'-0.29rem',left:'-0.3rem',height:'calc(32px)',borderTopRightRadius:'0.6rem',borderBottomLeftRadius:'0rem',borderBottomRightRadius:'0rem',overflow:'hidden'}}
                       className={`eventRange ${timelineStyles.eventRange}`}>
                     <div className={`${timelineStyles[event.category + 'l']}`} style={{width:'100%',height:'0.25rem'}}></div>
                   </div>
                 )}
                 {(isListedAsParent(event.id)) && (
-                  <div style={{}} className={`${timelineStyles.parentExpand} ${timelineStyles[event.category + 'e']}`} onClick={() => toggleParentSelection(event.id)}>
+                  <div style={{}} className={`${timelineStyles.parentExpand} ${timelineStyles[event.category + 'e']}`} onClick={(e) => {e.stopPropagation();toggleParentSelection(event.id)}}>
                     <Icon className={`${timelineStyles.arrow} ${timelineStyles[event.category + 'Arrow']}`} icon={"arrow"} onCompleted={onCompleted} onError={onError}
                         style={{transform:`rotate(${isParentSelected(event.id) ? 0 : 180}deg)`,WebkitTransform:`rotate(${isParentSelected(event.id) ? 0 : 180}deg)`,
                           msTransform:`rotate(${isParentSelected(event.id) ? 0 : 180}deg)`}}>

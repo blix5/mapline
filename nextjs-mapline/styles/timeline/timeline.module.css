@@ -149,15 +149,15 @@
     line-height: 70%;
 
     transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
-        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out;
+        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, background-color 0.3s ease-out;
     -moz-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
-        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out;
+        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, background-color 0.3s ease-out;
     -ms-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
-        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out;
+        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, background-color 0.3s ease-out;
     -webkit-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
-        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out;
+        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, background-color 0.3s ease-out;
 }
-.eventDiv:hover .eventsl {
+.eventDiv:hover .eventsl, .selectedEvent .eventsl {
     opacity: 0.6;
 
     transition: opacity 0.3s ease-out;
@@ -167,7 +167,7 @@
 
     z-index: 51;
 }
-.eventDiv:hover .endDate {
+.eventDiv:hover .endDate, .selectedEvent .endDate {
     opacity: 1;
     position: relative;
     display: flex;
@@ -180,9 +180,7 @@
     from {filter: brightness(2);}
     to {filter: none;}
 }
-.events:hover {
-    z-index: 300;
-}
+
 .events h6 {
     display: inline;
     font-weight: 100;
@@ -210,10 +208,10 @@
 }
 
 .eventRange {
-    transition: width 0.5s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
-    -moz-transition: width 0.5s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
-    -ms-transition: width 0.5s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
-    -webkit-transition: width 0.5s ease-out, border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
+    transition: border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
+    -moz-transition: border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
+    -ms-transition: border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
+    -webkit-transition: border-radius 0.5s ease-out, margin 0.5s ease-out, padding 0.5s ease-out;
 }
 
 .childEvent {
@@ -277,6 +275,11 @@
     left: 0.25rem;
 }
 
+.events:hover {
+    z-index: 300;
+    border: 0.3rem solid transparent;
+}
+
 .event {
     background-color: #F7E38A;
     border: 0.3rem solid #A38B31;
@@ -285,65 +288,73 @@
 }
 .event p { color: #A38B31; }
 .event .filterIcon { fill: #A38B31; }
-.event:hover {
+.event:hover, .event.selectedEvent {
     box-shadow: none;
-    border: 0.3rem solid #F7E38A;
     color: #A38B31;
 }
+.event:hover {
+    background-color: #f7ebb3;
+}
 .eventl { background-color: #A38B31; }
-.eventDiv:hover .evente { background-color: #A38B31; }
-.eventDiv:hover .eventArrow { fill: #F7E38A; }
+.eventDiv:hover .evente, .eventDiv .selectedEvent .evente { background-color: #A38B31; }
+.eventDiv:hover .eventArrow, .eventDiv .selectedEvent .eventArrow { fill: #F7E38A; }
 
 .legislation {
-    background-color: #B0E5A7;
+    background-color: #98de8e;
     border: 0.3rem solid #3E7B2E;
     box-shadow: inset 0rem 25px #3E7B2E;
-    color: #B0E5A7;
+    color: #98de8e;
 }
 .legislation p { color: #3E7B2E; }
 .legislation .filterIcon { fill: #3E7B2E; }
-.legislation:hover {
+.legislation:hover, .legislation.selectedEvent {
     box-shadow: none;
-    border: 0.3rem solid #B0E5A7;
     color: #3E7B2E;
 }
+.legislation:hover {
+    background-color: #bae9b1;
+}
 .legislationl { background-color: #3E7B2E; }
-.eventDiv:hover .legislatione { background-color: #3E7B2E; }
-.eventDiv:hover .legislationArrow { fill: #B0E5A7; }
+.eventDiv:hover .legislatione, .eventDiv .selectedEvent .legislatione { background-color: #3E7B2E; }
+.eventDiv:hover .legislationArrow, .eventDiv .selectedEvent .legislationArrow { fill: #98de8e; }
 
 .foreign {
-    background-color: #d79fe3;
+    background-color: #d291e0;
     border: 0.3rem solid #75337c;
     box-shadow: inset 0rem 25px #75337c;
-    color: #d79fe3;
+    color: #d291e0;
 }
 .foreign p { color: #75337c; }
 .foreign .filterIcon { fill: #75337c; }
-.foreign:hover {
+.foreign:hover, .foreign.selectedEvent {
     box-shadow: none;
-    border: 0.3rem solid #d79fe3;
     color: #75337c;
 }
+.foreign:hover {
+    background-color: #dcb8e4;
+}
 .foreignl { background-color: #75337c; }
-.eventDiv:hover .foreigne { background-color: #75337c; }
-.eventDiv:hover .foreignArrow { fill: #d79fe3; }
+.eventDiv:hover .foreigne, .eventDiv .selectedEvent .foreigne { background-color: #75337c; }
+.eventDiv:hover .foreignArrow, .eventDiv .selectedEvent .foreignArrow { fill: #d291e0; }
 
 .work {
-    background-color: #8dced0;
+    background-color: #72c2c5;
     border: 0.3rem solid #426263;
     box-shadow: inset 0rem 25px #426263;
-    color: #8dced0;
+    color: #72c2c5;
 }
 .work p { color: #426263; }
 .work .filterIcon { fill: #426263; }
-.work:hover {
+.work:hover, .work.selectedEvent {
     box-shadow: none;
-    border: 0.3rem solid #8dced0;
     color: #426263;
 }
+.work:hover {
+    background-color: #9fd7d9;
+}
 .workl { background-color: #426263; }
-.eventDiv:hover .worke { background-color: #426263; }
-.eventDiv:hover .workArrow { fill: #8dced0; }
+.eventDiv:hover .worke, .eventDiv .selectedEvent .worke { background-color: #426263; }
+.eventDiv:hover .workArrow, .eventDiv .selectedEvent .workArrow { fill: #72c2c5; }
 
 .ruling {
     background-color: #d28b8b;
@@ -353,11 +364,18 @@
 }
 .ruling p { color: #853030; }
 .ruling .filterIcon { fill: #853030; }
-.ruling:hover {
+.ruling:hover, .ruling.selectedEvent {
     box-shadow: none;
-    border: 0.3rem solid #d28b8b;
     color: #853030;
 }
+.ruling:hover {
+    background-color: #dca7a7;
+}
 .rulingl { background-color: #853030; }
-.eventDiv:hover .rulinge { background-color: #853030; }
-.eventDiv:hover .rulingArrow { fill: #d28b8b; }
+.eventDiv:hover .rulinge, .eventDiv .selectedEvent .rulinge { background-color: #853030; }
+.eventDiv:hover .rulingArrow, .eventDiv .selectedEvent .rulingArrow { fill: #d28b8b; }
+
+.selectedEvent {
+    z-index: 400;
+    border: 0.3rem solid transparent;
+}
