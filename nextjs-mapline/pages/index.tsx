@@ -18,7 +18,7 @@ import mapStyles from '../styles/map/map.module.css';
 import stateStyles from '../styles/map/states.module.css';
 import timelineStyles from '../styles/timeline/timeline.module.css';
 
-import { getStateList, getTimeline } from '../libs/sheets';
+import { getStateList, getLocations, getTimeline } from '../libs/sheets';
 
 import State from '../libs/State';
 import MapSvg from '../libs/MapSvg';
@@ -32,13 +32,16 @@ import categoryToIndex from '../libs/categoryIndex';
 import dateFilterRender from '../libs/dateFilterRender';
 
 import compassDimensions from '../libs/mapUtils';
+import { latLonToX, latLonToY } from '../libs/coordinateUtils';
 
 export async function getStaticProps(context) {
   const states = await getStateList();
   const events = await getTimeline();
+  const locations = await getLocations();
   return {
     props: {
       states: states.slice(1, states.length),
+      locations: locations.slice(1, locations.length),
       events: events.slice(1, events.length)
     },
     revalidate: 1,
@@ -59,7 +62,7 @@ const convertDateToDecimal = (dateString) => {
 }
 
 
-export default function Home({ states, events, onCompleted, onError }) {
+export default function Home({ states, locations, events, onCompleted, onError }) {
   const startYear = 1750;
   const endYear = 2020;
 
@@ -70,11 +73,14 @@ export default function Home({ states, events, onCompleted, onError }) {
   const [mapX, setMapX] = useQueryState('mpx', parseAsFloat.withDefault(-1450));
   const [mapY, setMapY] = useQueryState('mpy', parseAsFloat.withDefault(-275));
   const [mapScale, setMapScale] = useQueryState('mps', parseAsFloat.withDefault(1));
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [mousePos, setMousePos] = React.useState({ x: null, y: null });
 
   const [timeX, setTimeX] = useQueryState('tpx', parseAsFloat.withDefault(0));
   const [timeY, setTimeY] = useQueryState('tpy', parseAsFloat.withDefault(0));
   const [timeScale, setTimeScale] = useQueryState('tps', parseAsFloat.withDefault(100));
   const [timeYear, setTimeYear] = useQueryState('year', parseAsFloat.withDefault(1492));
+  const [hoverTimeline, setHoverTimeline] = React.useState(false);
 
   const mapLimX = 2400;
   const mapLimY = 1280;
@@ -89,6 +95,7 @@ export default function Home({ states, events, onCompleted, onError }) {
   React.useEffect(() => {
     eventsRef.current = eventsRef.current.slice(0, events.length);
   }, [events]);
+
   const [parents, setParents] = React.useState([]);
   React.useEffect(() => {
     const parentItems = events.map(event => event.parent).filter(parent => parent !== null && parent !== undefined);
@@ -208,9 +215,15 @@ export default function Home({ states, events, onCompleted, onError }) {
       scroll.scrollTo(timeX - width / 2, { smooth: true, containerId: 'timeline', duration: 500, horizontal: true });
       scroll.scrollTo(timeY, { smooth: true, containerId: 'timeline', duration: 500, horizontal: false })
       setEventSelected(event.id);
+
+      setMapX(0);
     } else {
       setEventSelected(null);
     }
+  }
+
+  const locHoverNear = (posX, posY) => {
+    return Math.sqrt(Math.pow(Math.abs(posX - (mousePos.x - mapX) / mapScale), 2) + Math.pow(Math.abs(posY - (mousePos.y - mapY - 78) / mapScale), 2)) < (25 / mapScale);
   }
 
   React.useEffect(() => {
@@ -230,13 +243,14 @@ export default function Home({ states, events, onCompleted, onError }) {
 
       {/* MAP */}
 
-      <section className={mapStyles.map} onWheelCapture={onMapScroll} style={{height:`${(height - 64) * borderY}px`}}>
+      <section id={`map`} className={mapStyles.map} onWheelCapture={onMapScroll} style={{height:`${(height - 64) * borderY}px`}}>
         <svg width={'10rem'} height={'100%'} style={{background:`linear-gradient(90deg, rgba(0,0,0,0.8), transparent)`,zIndex:109}}></svg>
         <Image className={mapStyles.compass} src="/images/compass.png" height={256} width={256} alt="compass" style={{height:`${compassDimensions(height, borderY)}px`,width:`${compassDimensions(height, borderY)}px`,
             top:`calc(${((height - 64) * borderY)}px - ${compassDimensions(height, borderY)}px - 1.2rem)`}}/>
-        <DraggableCore onDrag={(e, data) => {onMapDrag(data)}}>
-          <div style={{position:"absolute",width:"100%",height:"100%",zIndex:100,transform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,WebkitTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,
-              msTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,transformOrigin:"top left",WebkitTransformOrigin:"top left",msTransformOrigin:"top left",}}>
+        <DraggableCore onDrag={(e, data) => {onMapDrag(data)}} onStart={() => setIsDragging(true)} onStop={() => setIsDragging(false)}>
+          <div onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} style={{position:"absolute",width:"100%",height:"100%",zIndex:100,transform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,WebkitTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,
+              msTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,transformOrigin:"top left",WebkitTransformOrigin:"top left",msTransformOrigin:"top left"}}
+              className={(hoverTimeline && !isDragging) ? mapStyles.draggableMapSlow : mapStyles.draggableMap}>
 
             <svg className={mapStyles.ocean} width={`${mapLimX}px`} height={`${mapLimY}px`} style={{zIndex:"-100"}} ></svg>
             <svg className={mapStyles.mapShadow} width={`${mapLimX}px`} height={`${mapLimY * 2}px`} style={{zIndex:"102",transform:`translate(${-1 * mapLimX}px, ${-0.5 * mapLimY}px)`,
@@ -255,26 +269,36 @@ export default function Home({ states, events, onCompleted, onError }) {
                   <>
                     <State name={state.name} className={`${stateStyles.state} ${(Number(convertDateToDecimal(state.stateDate)) > timeYear) && stateStyles.nonState}
                         ${(Number(convertDateToDecimal(state.stateDate)) <= timeYear) && stateStyles.stateHover}`} width={Number(state.width) + 5} height={Number(state.height) + 5}
-                        style={{left:Number(state.x),top:Number(state.y)}} onCompleted={onCompleted} onError={onError}
+                        style={{left:Number(state.x),top:Number(state.y)}} onCompleted={onCompleted} onError={onError} id={state.id}
                         onMouseEnter={() => (setInHidden(index))}
-                        onMouseLeave={() => inHidden == index && setInHidden(-1)}/>
+                        onMouseLeave={() => inHidden == index && setInHidden(-1)}
+                    />
                     <div style={{left:Number(state.x) + Number(state.xLabel), top:Number(state.y) + Number(state.yLabel), width:Number(state.width) + 5, height:Number(state.height) + 5,
                         fontSize: 6 * Math.pow((2/3) * Number(state.width) + (1/3) * Number(state.height), 0.3)}}>
                       <h2 className={`${stateStyles.state} ${stateStyles.stateLabel} ${(Number(convertDateToDecimal(state.stateDate)) > timeYear) && stateStyles.nonStateLabel}`}
                             style={{opacity: `${inHidden == index ? 1 : 0}`}}>
-                        {state.displayName}
+                        {state.displayName + ((Number(convertDateToDecimal(state.stateDate)) > timeYear) ? ' Territory' : '')}
                       </h2>
                     </div>
                   </>
                 }
               </>
             ))}
+
+            {locations.map((location, index) => (
+              <>
+                <div style={{transformOrigin:`top left`,transform:`scale(${0.6 / mapScale + 0.4})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:110,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
+                  <div className={mapStyles.locationDot}></div>
+                  <h3 className={`${mapStyles.locationLabel} ${!locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) && mapStyles.locationLabelHidden}`}>{location.displayName}</h3>
+                </div>
+              </>
+            ))}
+
           </div>
         </DraggableCore>
       </section>
 
       {/* DRAG BORDER */}
-
       <div style={{position:"absolute",top:"3.75rem",zIndex:150,width:"100%"}}>
         <DraggableCore onDrag={(e, data) => {setBorderY(((data.y - 5) < ((height - 64) * 0.25)) ? 0.25 :
             ((data.y - 5) > ((height - 64) * 0.75)) ? 0.75 : (data.y - 5) / (height - 64))}}>
@@ -286,7 +310,7 @@ export default function Home({ states, events, onCompleted, onError }) {
       <input type='range' value={timeScale} min={50} max={250} onChange={(e) => onTimelineZoom(Number(e.target.value))} className={timelineStyles.timeScale}
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`${((timeScale - 50) * 100) / 200}% 100%`,width:`${0.25 * (height - ((height - 64) * borderY))}px`}}/>
       <section id={`timeline`} className={`${timelineStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
-          style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}}>
+          style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}} onMouseEnter={() => setHoverTimeline(true)} onMouseLeave={() => setHoverTimeline(false)}>
         <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}} onClick={() => eventClick(null)}>
           {events.map((event, i) => (
             <div style={{zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>

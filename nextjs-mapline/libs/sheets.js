@@ -21,16 +21,17 @@ export async function getStateList() {
         if(rows.length) {
             return rows.map((row) => ({
                 name: row[0],
-                displayName: row[1],
-                width: row[2],
-                height: row[3],
-                x: row[4],
-                y: row[5],
-                stateDate: row[6],
-                startDate: row[7],
-                endDate: row[8],
-                xLabel: row[9],
-                yLabel: row[10]
+                id: row[1],
+                displayName: row[2],
+                width: row[3],
+                height: row[4],
+                x: row[5],
+                y: row[6],
+                stateDate: row[7],
+                startDate: row[8],
+                endDate: row[9],
+                xLabel: row[10],
+                yLabel: row[11]
             }));
         }
     } catch(err) {
@@ -71,6 +72,38 @@ export async function getTimeline() {
                 filter: row[9] ?? null,
                 importance: row[10] ?? 5,
                 parent: row[11] ?? null
+            }));
+        }
+    } catch(err) {
+        console.log(err);
+    }
+    return [];
+}
+
+export async function getLocations() {
+    try {
+        const target = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
+        
+        const auth = new google.auth.JWT(
+            process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+            null,
+            (process.env.GOOGLE_SHEETS_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+            target
+        );
+
+        const sheets = google.sheets({ version: 'v4', auth });
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: process.env.SPREADSHEET_ID,
+            range: 'location',
+        });
+
+        const rows = response.data.values;
+        if(rows.length) {
+            return rows.map((row) => ({
+                id: row[0] ?? null,
+                displayName: row[1] ?? 'undefined',
+                lat: row[2] ?? 0,
+                long: row[3] ?? 0
             }));
         }
     } catch(err) {

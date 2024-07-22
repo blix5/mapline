@@ -1,8 +1,8 @@
 .state {
-    transition: filter 0.2s linear, -webkit-filter 0.2s linear, fill 0.2s linear, z-index 0.2s linear;
-    -moz-transition: filter 0.2s linear, -webkit-filter 0.2s linear, fill 0.2s linear, z-index 0.2s linear;
-    -ms-transition: filter 0.2s linear, -webkit-filter 0.2s linear, fill 0.2s linear, z-index 0.2s linear;
-    -webkit-transition: filter 0.2s linear, -webkit-filter 0.2s linear, fill 0.2s linear, z-index 0.2s linear;
+    transition: filter 0.2s linear, fill 0.2s linear, z-index 0.2s linear;
+    -moz-transition: filter 0.2s linear, fill 0.2s linear, z-index 0.2s linear;
+    -ms-transition: filter 0.2s linear, fill 0.2s linear, z-index 0.2s linear;
+    -webkit-transition: -webkit-filter 0.2s linear, fill 0.2s linear, z-index 0.2s linear;
 
     filter: none;
     -webkit-filter: none;
