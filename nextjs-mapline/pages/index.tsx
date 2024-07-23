@@ -125,7 +125,10 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const getCurrentState = (id) => {
     const allStatesWithId = states
         .filter(state => state !== null && state !== undefined && state.id === id);
-    return allStatesWithId.find(state => convertDateToDecimal(state.endDate) >= timeYear);
+    return allStatesWithId.find(state => convertDateToDecimal(state.endDate) >= timeYear && convertDateToDecimal(state.startDate) <= timeYear);
+  }
+  const oopsieDaisies = (id) => {
+    return states.find(state => state.id == id);
   }
   const getLocation = (id) => {
     return locations.find(location => location.id == id);
@@ -229,7 +232,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
       if(event?.location) {
         if(isListedAsState(event.location)) {
-          const locSel = getCurrentState(event.location);
+          const locSel = getCurrentState(event.location) || oopsieDaisies(event.location);
           const statePosX = Number(locSel.x) + (Number(locSel.width) / 2)
           const newMapX = (width / 2) - (statePosX * mapScale);
           setMapX(newMapX);
