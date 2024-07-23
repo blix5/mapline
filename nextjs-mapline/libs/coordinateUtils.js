@@ -1,4 +1,4 @@
-import numeric from 'numeric';
+/*import numeric from 'numeric';
 
 // Known points
 const points = [
@@ -84,7 +84,9 @@ const points = [
     { lat: 50, lon: -80, x: 1693.5, y: 141.5 },
     { lat: 50, lon: -75, x: 1833.1, y: 113.4 },
     { lat: 50, lon: -70, x: 1970.9, y: 77.7 },
-    { lat: 50, lon: -65, x: 2106.5, y: 34.4 }
+    { lat: 50, lon: -65, x: 2106.5, y: 34.4 },
+
+    { lat: 21.3099, lon: -157.8581, x: -1184.9, y: 742.4 }, // Honolulu
     
 ];
 
@@ -140,4 +142,4 @@ export function latLonToY(latitude, longitude) {
     const y = coeffsY[0] + coeffsY[1] * longitude + coeffsY[2] * latitude + coeffsY[3] * longitude * latitude + coeffsY[4] * longitude ** 2 + coeffsY[5] * latitude ** 2;
 
     return y;
-}
+}*/

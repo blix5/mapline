@@ -22,6 +22,7 @@ import { getStateList, getLocations, getTimeline } from '../libs/sheets';
 
 import State from '../libs/State';
 import MapSvg from '../libs/MapSvg';
+import { LambertConformalConicMap, latLonToX, latLonToY } from '../libs/LambertConformalConicMap';
 import FilterIcon from '../libs/FilterIcon';
 import Icon from '../libs/Icon';
 
@@ -32,7 +33,6 @@ import categoryToIndex from '../libs/categoryIndex';
 import dateFilterRender from '../libs/dateFilterRender';
 
 import compassDimensions from '../libs/mapUtils';
-import { latLonToX, latLonToY } from '../libs/coordinateUtils';
 
 export async function getStaticProps(context) {
   const states = await getStateList();
@@ -76,6 +76,17 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const [isDragging, setIsDragging] = React.useState(false);
   const [mousePos, setMousePos] = React.useState({ x: null, y: null });
 
+  const tempMousePos = React.useRef({x: 0, y: 0});
+  const mapMouseDown = (e) => {
+    tempMousePos.current = {x: e.clientX, y: e.clientY};
+  }
+  const mapMouseUp = (e) => {
+      const {x, y} = tempMousePos.current;
+      if (Math.abs(e.clientX - x) < 2 && Math.abs(e.clientY - y) < 2) {
+          setLocSel(null);
+      }
+  }
+
   const [timeX, setTimeX] = useQueryState('tpx', parseAsFloat.withDefault(0));
   const [timeY, setTimeY] = useQueryState('tpy', parseAsFloat.withDefault(0));
   const [timeScale, setTimeScale] = useQueryState('tps', parseAsFloat.withDefault(100));
@@ -97,6 +108,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
   }, [events]);
 
   const [parents, setParents] = React.useState([]);
+  const [locSel, setLocSel] = React.useState(null);
   React.useEffect(() => {
     const parentItems = events.map(event => event.parent).filter(parent => parent !== null && parent !== undefined);
     const uniqueParentsSet = new Set(parentItems);
@@ -110,12 +122,26 @@ export default function Home({ states, locations, events, onCompleted, onError }
       )
     );
   }
+  const getCurrentState = (id) => {
+    const allStatesWithId = states
+        .filter(state => state !== null && state !== undefined && state.id === id);
+    return allStatesWithId.find(state => convertDateToDecimal(state.endDate) >= timeYear);
+  }
+  const getLocation = (id) => {
+    return locations.find(location => location.id == id);
+  }
   const isParentSelected = (parent) => {
     const parentObj = parents.find(p => p.parent === parent);
     return parentObj ? parentObj.expanded : false;
   }
   const isListedAsParent = (id) => {
     return parents.some(parent => parent.parent === id);
+  }
+  const isListedAsState = (id) => {
+    return states.some(state => state.id === id);
+  }
+  const isListedAsLoc = (id) => {
+    return locations.some(location => location.id === id);
   }
 
   const [scrolling, setScrolling] = React.useState(true);
@@ -127,6 +153,9 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const onMapScroll = (e) => {
     const delta = e.deltaY * -0.003;
     var newScale = mapScale + delta;
+    if(newScale < 0.25) newScale = 0.25;
+    else if(newScale > 2) newScale = 2;
+
     const ratio = 1 - newScale / mapScale;
     const mapHeight = (height - 64) * borderY;
 
@@ -134,29 +163,11 @@ export default function Home({ states, locations, events, onCompleted, onError }
     var newY = mapY + (e.clientY - mapY) * ratio;
     if(newX > width / 2) newX = width / 2; else if(newX < width / 2 - mapLimX * mapScale) newX = width / 2 - mapLimX * mapScale;
     if(newY > mapHeight / 2) newY = mapHeight / 2; else if(newY < mapHeight / 2 - mapLimY * mapScale) newY = mapHeight / 2 - mapLimY * mapScale;
-    
-    if(newScale < 0.5) setMapScale(0.5);
-    else if(newScale > 1.5) setMapScale(1.5);
-    else {
-      setMapX(newX);
-      setMapY(newY);
-      setMapScale(newScale);
-    }
-  };
 
-  React.useEffect(() => {
-    Events.scrollEvent.register('begin', (to, element) => {
-      console.log('begin', to, element);
-    });
-    Events.scrollEvent.register('end', (to, element) => {
-      console.log('end', to, element);
-    });
-    scrollSpy.update();
-    return () => {
-      Events.scrollEvent.remove('begin');
-      Events.scrollEvent.remove('end');
-    };
-  }, []);
+    setMapX(newX);
+    setMapY(newY);
+    setMapScale(newScale);
+  };
 
   const onMapDrag = (data) => {
     const mapHeight = (height - 64) * borderY;
@@ -216,14 +227,38 @@ export default function Home({ states, locations, events, onCompleted, onError }
       scroll.scrollTo(timeY, { smooth: true, containerId: 'timeline', duration: 500, horizontal: false })
       setEventSelected(event.id);
 
-      setMapX(0);
+      if(event?.location) {
+        if(isListedAsState(event.location)) {
+          const locSel = getCurrentState(event.location);
+          const statePosX = Number(locSel.x) + (Number(locSel.width) / 2)
+          const newMapX = (width / 2) - (statePosX * mapScale);
+          setMapX(newMapX);
+          const statePosY = Number(locSel.y) + (Number(locSel.height) / 2)
+          const newMapY = ((height - 64) * borderY / 2) - (statePosY * mapScale);
+          setMapY(newMapY);
+          setLocSel(event.location);
+        } else if(isListedAsLoc(event.location)) {
+          const locSel = getLocation(event.location);
+          const locPosX = latLonToX(Number(locSel.lat), Number(locSel.long));
+          const newMapX = (width / 2) - (locPosX * mapScale);
+          setMapX(newMapX);
+          const locPosY = latLonToY(Number(locSel.lat), Number(locSel.long));
+          const newMapY = ((height - 64) * borderY / 2) - (locPosY * mapScale);
+          setMapY(newMapY);
+          setLocSel(event.location);
+        } else {
+          setLocSel(null);
+        }
+      } else {
+        setLocSel(null);
+      }
     } else {
       setEventSelected(null);
     }
   }
 
   const locHoverNear = (posX, posY) => {
-    return Math.sqrt(Math.pow(Math.abs(posX - (mousePos.x - mapX) / mapScale), 2) + Math.pow(Math.abs(posY - (mousePos.y - mapY - 78) / mapScale), 2)) < (25 / mapScale);
+    return Math.sqrt(Math.pow(Math.abs(posX - (mousePos.x - mapX) / mapScale), 2) + Math.pow(Math.abs(posY - (mousePos.y - mapY - 70) / mapScale), 2)) < (25 / mapScale);
   }
 
   React.useEffect(() => {
@@ -250,25 +285,29 @@ export default function Home({ states, locations, events, onCompleted, onError }
         <DraggableCore onDrag={(e, data) => {onMapDrag(data)}} onStart={() => setIsDragging(true)} onStop={() => setIsDragging(false)}>
           <div onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} style={{position:"absolute",width:"100%",height:"100%",zIndex:100,transform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,WebkitTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,
               msTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,transformOrigin:"top left",WebkitTransformOrigin:"top left",msTransformOrigin:"top left"}}
-              className={(hoverTimeline && !isDragging) ? mapStyles.draggableMapSlow : mapStyles.draggableMap}>
+              className={`${(hoverTimeline && !isDragging) ? mapStyles.draggableMapSlow : mapStyles.draggableMap}`} onMouseDownCapture={mapMouseDown} onMouseUpCapture={mapMouseUp}>
 
-            <svg className={mapStyles.ocean} width={`${mapLimX}px`} height={`${mapLimY}px`} style={{zIndex:"-100"}} ></svg>
-            <svg className={mapStyles.mapShadow} width={`${mapLimX}px`} height={`${mapLimY * 2}px`} style={{zIndex:"102",transform:`translate(${-1 * mapLimX}px, ${-0.5 * mapLimY}px)`,
-                WebkitTransform:`translate(${-1 * mapLimX}px, ${-0.5 * mapLimY}px)`,msTransform:`translate(${-1 * mapLimX}px, ${-0.5 * mapLimY}px)`}}></svg>
-            <svg className={mapStyles.mapShadow} width={`${mapLimX}px`} height={`${mapLimY * 2}px`} style={{zIndex:"102",transform:`translate(${mapLimX}px, ${-0.5 * mapLimY}px)`,
-                WebkitTransform:`translate(${mapLimX}px, ${-0.5 * mapLimY}px)`,msTransform:`translate(${mapLimX}px, ${-0.5 * mapLimY}px)`}}></svg>
-            <svg className={mapStyles.mapShadow} width={`${mapLimX}px`} height={`${mapLimY}px`} style={{zIndex:"102",transform:`translate(${mapLimX}px, ${-0.5 * mapLimY}px)`,
-                WebkitTransform:`translate(0px, ${-1 * mapLimY}px)`,msTransform:`translate(${mapLimX}px, ${-0.5 * mapLimY}px)`}}></svg>
-            <svg className={mapStyles.mapShadow} width={`${mapLimX}px`} height={`${mapLimY}px`} style={{zIndex:"102",transform:`translate(${mapLimX}px, ${-0.5 * mapLimY}px)`,
-                WebkitTransform:`translate(0px, ${mapLimY}px)`,msTransform:`translate(${mapLimX}px, ${-0.5 * mapLimY}px)`}}></svg>
-            <MapSvg name={"mainland"} className={`${stateStyles.state} ${stateStyles.mainland}`} onCompleted={onCompleted} onError={onError} width={2197.2 + 5} height={1427.8 + 5} style={{left:288.2,top:-148.8}}/>
+            <svg className={mapStyles.ocean} width={`${mapLimX * 3}px`} height={`${mapLimY * 3}px`} style={{zIndex:"-100",transform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,
+                WebkitTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,msTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`}} ></svg>
+            <svg className={mapStyles.mapShadow} width={`${mapLimX * 2}px`} height={`${mapLimY * 4}px`} style={{zIndex:"102",transform:`translate(${-3 * mapLimX}px, ${-1.5 * mapLimY}px)`,
+                WebkitTransform:`translate(${-3 * mapLimX}px, ${-1.5 * mapLimY}px)`,msTransform:`translate(${-3 * mapLimX}px, ${-1.5 * mapLimY}px)`}}></svg>
+            <svg className={mapStyles.mapShadow} width={`${mapLimX * 2}px`} height={`${mapLimY * 4}px`} style={{zIndex:"102",transform:`translate(${2 * mapLimX}px, ${-1.5 * mapLimY}px)`,
+                WebkitTransform:`translate(${2 * mapLimX}px, ${-1.5 * mapLimY}px)`,msTransform:`translate(${2 * mapLimX}px, ${-1.5 * mapLimY}px)`}}></svg>
+            <svg className={mapStyles.mapShadow} width={`${mapLimX * 4}px`} height={`${mapLimY}px`} style={{zIndex:"102",transform:`translate(${-1.5 * mapLimX}px, ${-2 * mapLimY}px)`,
+                WebkitTransform:`translate(${-1.5 * mapLimX}px, ${-2 * mapLimY}px)`,msTransform:`translate(${-1.5 * mapLimX}px, ${-2 * mapLimY}px)`}}></svg>
+            <svg className={mapStyles.mapShadow} width={`${mapLimX * 4}px`} height={`${mapLimY}px`} style={{zIndex:"102",transform:`translate(${-1.5 * mapLimX}px, ${2 * mapLimY}px)`,
+                WebkitTransform:`translate(${-1.5 * mapLimX}px, ${2 * mapLimY}px)`,msTransform:`translate(${-1.5 * mapLimX}px, ${2 * mapLimY}px)`}}></svg>
+            <div style={{pointerEvents:'none',zIndex:"200",boxShadow:'inset 0 0 300px 400px #4B5B96',width:`${mapLimX * 3}px`,height:`${mapLimY * 3}px`,transform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,
+                WebkitTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,msTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`}}></div>
+            <LambertConformalConicMap className={`${stateStyles.mainland}`} width={8000} height={7000} style={{left:-2800,top:-3100}}/>
             
             {states.map((state, index) => (
               <>
                 {(convertDateToDecimal(state.startDate) <= timeYear && convertDateToDecimal(state.endDate) > timeYear) &&
                   <>
-                    <State name={state.name} className={`${stateStyles.state} ${(Number(convertDateToDecimal(state.stateDate)) > timeYear) && stateStyles.nonState}
-                        ${(Number(convertDateToDecimal(state.stateDate)) <= timeYear) && stateStyles.stateHover}`} width={Number(state.width) + 5} height={Number(state.height) + 5}
+                    <State name={state.name} className={`${stateStyles.state} ${locSel == state.id && ((Number(convertDateToDecimal(state.stateDate)) > timeYear) ? stateStyles.nonStateHover : stateStyles.stateHover)}
+                        ${(Number(convertDateToDecimal(state.stateDate)) > timeYear) && stateStyles.nonState}`}
+                        width={Number(state.width) + 5} height={Number(state.height) + 5}
                         style={{left:Number(state.x),top:Number(state.y)}} onCompleted={onCompleted} onError={onError} id={state.id}
                         onMouseEnter={() => (setInHidden(index))}
                         onMouseLeave={() => inHidden == index && setInHidden(-1)}
@@ -276,7 +315,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
                     <div style={{left:Number(state.x) + Number(state.xLabel), top:Number(state.y) + Number(state.yLabel), width:Number(state.width) + 5, height:Number(state.height) + 5,
                         fontSize: 6 * Math.pow((2/3) * Number(state.width) + (1/3) * Number(state.height), 0.3)}}>
                       <h2 className={`${stateStyles.state} ${stateStyles.stateLabel} ${(Number(convertDateToDecimal(state.stateDate)) > timeYear) && stateStyles.nonStateLabel}`}
-                            style={{opacity: `${inHidden == index ? 1 : 0}`}}>
+                            style={{opacity: `${(inHidden == index || locSel == state.id) ? 1 : 0}`}}>
                         {state.displayName + ((Number(convertDateToDecimal(state.stateDate)) > timeYear) ? ' Territory' : '')}
                       </h2>
                     </div>
@@ -288,8 +327,8 @@ export default function Home({ states, locations, events, onCompleted, onError }
             {locations.map((location, index) => (
               <>
                 <div style={{transformOrigin:`top left`,transform:`scale(${0.6 / mapScale + 0.4})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:110,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
-                  <div className={mapStyles.locationDot}></div>
-                  <h3 className={`${mapStyles.locationLabel} ${!locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) && mapStyles.locationLabelHidden}`}>{location.displayName}</h3>
+                  <div className={`${mapStyles.locationDot}`} style={{opacity:(locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) || locSel == location.id) ? 1 : 0.3}}></div>
+                  <h3 className={`${mapStyles.locationLabel} ${(!locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) && locSel != location.id) && mapStyles.locationLabelHidden}`}>{location.displayName}</h3>
                 </div>
               </>
             ))}
@@ -297,7 +336,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
           </div>
         </DraggableCore>
       </section>
-
+      
       {/* DRAG BORDER */}
       <div style={{position:"absolute",top:"3.75rem",zIndex:150,width:"100%"}}>
         <DraggableCore onDrag={(e, data) => {setBorderY(((data.y - 5) < ((height - 64) * 0.25)) ? 0.25 :
@@ -311,7 +350,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`${((timeScale - 50) * 100) / 200}% 100%`,width:`${0.25 * (height - ((height - 64) * borderY))}px`}}/>
       <section id={`timeline`} className={`${timelineStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
           style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}} onMouseEnter={() => setHoverTimeline(true)} onMouseLeave={() => setHoverTimeline(false)}>
-        <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}} onClick={() => eventClick(null)}>
+        <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}} onMouseUpCapture={() => !isDragging && eventClick(null)}>
           {events.map((event, i) => (
             <div style={{zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>
 

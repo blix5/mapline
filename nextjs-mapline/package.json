@@ -17,6 +17,7 @@
     "@emotion/styled": "^11.11.5",
     "@mui/material": "^5.16.1",
     "babel-cli": "^6.26.0",
+    "d3": "^7.9.0",
     "date-fns": "^2.30.0",
     "file-loader": "^6.2.0",
     "gl-matrix": "^3.4.3",
@@ -42,10 +43,16 @@
     "request": "^2.79.0",
     "router-dom": "^2.2.11",
     "sharp": "^0.33.4",
-    "styled-components": "^6.1.11"
+    "simplify-geojson": "^1.0.5",
+    "styled-components": "^6.1.11",
+    "topojson-client": "^3.1.0",
+    "topojson-server": "^3.0.1",
+    "topojson-simplify": "^3.0.3",
+    "turf": "^3.0.14"
   },
   "devDependencies": {
     "@svgr/webpack": "^8.1.0",
-    "@types/react": "18.2.39"
+    "@types/react": "18.2.39",
+    "json-loader": "^0.5.7"
   }
 }

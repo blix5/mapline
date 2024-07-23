@@ -10,40 +10,35 @@
     fill: #CACFE9;
     overflow: visible;
     pointer-events: none;
-    stroke: #4B5B96;
-    stroke-width: 0.7rem;
+    stroke: #7780AC;
+    stroke-width: 0.5rem;
+    z-index: 2;
 }
-.state:hover {
+.state:hover, .stateHover {
     transition: all 0.2s linear;
     -moz-transition: all 0.2s linear;
     -ms-transition: all 0.2s linear;
     -webkit-transition: all 0.2s linear;
 
     fill: #EEE9F3;
+    z-index: 100;
 }
 
 .nonState {
     fill: #9aa3ca;
-    z-index: 1;
 }
-.nonState:hover {
+.nonState:hover, .nonStateHover {
     fill: #aab2d4;
 }
 
 .mainland {
     fill: #7780AC;
-    z-index: 0;
-    pointer-events: none;
+    z-index: -50;
+    overflow: hidden;
+    position: absolute;
 }
 .mainland:hover {
     fill: #7780AC;
-}
-
-.stateHover {
-    z-index: 2;
-}
-.stateHover:hover {
-    z-index: 100;
 }
 
 .stateLabel {

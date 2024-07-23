@@ -8,7 +8,7 @@ export default function MapSvg({ name, onCompleted, onError, ...rest }) {
         return error.message;
     }
     if(loading) {
-        return "Loading...";
+        return "";
     }
     if(SvgIcon) {
         return (

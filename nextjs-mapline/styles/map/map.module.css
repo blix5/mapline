@@ -11,11 +11,8 @@
 }
 
 .draggableMap {
-    transition: transform 0.1s ease;
-    -webkit-transition: -webkit-transform 0.1s ease;
-    -moz-transition: -moz-transform 0.1s ease;
-    -ms-transition: -ms-transform 0.1s ease;
 }
+
 .draggableMapSlow {
     transition: transform 0.5s ease;
     -webkit-transition: -webkit-transform 0.5s ease;
@@ -38,12 +35,12 @@
 
 .ocean {
     background-color: #4B5B96;
+    position: absolute;
 }
 
 .mapShadow {
     background-color: #4B5B96;
     position: absolute;
-    box-shadow: 0 0 70px 100px #4B5B96;
 }
 
 .locationDot {
@@ -52,8 +49,7 @@
     left: -0.25rem;
     border: 0.25rem solid white;
     border-radius: 100%;
-    filter: drop-shadow(0 0 0.25rem rgba(0,0,0,0.65));
-    -webkit-filter: drop-shadow(0 0 0.25rem rgba(0,0,0,0.65));
+    transition: opacity 0.3s ease;
 }
 
 .locationLabel {
@@ -66,11 +62,16 @@
     filter: drop-shadow(0 0 0.25rem rgba(0,0,0,0.65));
     -webkit-filter: drop-shadow(0 0 0.25rem rgba(0,0,0,0.65)) blur(0);
     transition: opacity 0.3s ease, margin 0.3s ease-out, filter 0.3s ease;
+
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .locationLabelHidden {
     margin-left: -0.5rem;
     filter: drop-shadow(0 0 0.25rem rgba(0,0,0,0.65)) blur(0.1rem);
+    -webkit-filter: drop-shadow(0 0 0.25rem rgba(0,0,0,0.65)) blur(0.1rem);
     opacity: 0;
     transition: opacity 0.3s ease, margin 0.3s ease-out, filter 0.3s ease;
 }
@@ -83,4 +84,8 @@
     
     filter: drop-shadow(0 0 0.5rem rgba(0,0,0,0.5));
     -webkit-filter: drop-shadow(0 0 0.5rem rgba(0,0,0,0.5));
+
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
