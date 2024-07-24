@@ -20,9 +20,9 @@ import timelineStyles from '../styles/timeline/timeline.module.css';
 
 import { getStateList, getLocations, getTimeline } from '../libs/sheets';
 
-import State from '../libs/State';
-import MapSvg from '../libs/MapSvg';
-import { LambertConformalConicMap, latLonToX, latLonToY } from '../libs/LambertConformalConicMap';
+import State from '../libs/map/State';
+import MapSvg from '../libs/map/MapSvg';
+import { LandProjectionLLC, LabelProjectionLLC, latLonToX, latLonToY } from '../libs/map/LambertConformalConicMap';
 import FilterIcon from '../libs/FilterIcon';
 import Icon from '../libs/Icon';
 
@@ -32,7 +32,7 @@ import DecimalYearToDate from '../libs/dateDecimal';
 import categoryToIndex from '../libs/categoryIndex';
 import dateFilterRender from '../libs/dateFilterRender';
 
-import compassDimensions from '../libs/mapUtils';
+import compassDimensions from '../libs/map/mapUtils';
 
 export async function getStaticProps(context) {
   const states = await getStateList();
@@ -224,6 +224,37 @@ export default function Home({ states, locations, events, onCompleted, onError }
     setScrolling(true);
   }
 
+  const getLocX = (event) => {
+    if(event?.location) {
+      if(isListedAsState(event.location)) {
+        const locSel = getCurrentState(event.location) || oopsieDaisies(event.location);
+        return Number(locSel.x) + (Number(locSel.width) / 2);
+      } else if(isListedAsLoc(event.location)) {
+        const locSel = getLocation(event.location);
+        return latLonToX(Number(locSel.lat), Number(locSel.long));
+      } else {
+        return null;
+      }
+    } else {
+      return null;;
+    }
+  }
+  const getLocY = (event) => {
+    if(event?.location) {
+      if(isListedAsState(event.location)) {
+        const locSel = getCurrentState(event.location) || oopsieDaisies(event.location);
+        return Number(locSel.y) + (Number(locSel.height) / 2);
+      } else if(isListedAsLoc(event.location)) {
+        const locSel = getLocation(event.location);
+        return latLonToY(Number(locSel.lat), Number(locSel.long));
+      } else {
+        return null;
+      }
+    } else {
+      return null;;
+    }
+  }
+
   const eventClick = (event, timeX = 0, timeY = 0) => {
     if(event?.id) {
       scroll.scrollTo(timeX - width / 2, { smooth: true, containerId: 'timeline', duration: 500, horizontal: true });
@@ -292,17 +323,18 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
             <svg className={mapStyles.ocean} width={`${mapLimX * 3}px`} height={`${mapLimY * 3}px`} style={{zIndex:"-100",transform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,
                 WebkitTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,msTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`}} ></svg>
-            <svg className={mapStyles.mapShadow} width={`${mapLimX * 2}px`} height={`${mapLimY * 4}px`} style={{zIndex:"102",transform:`translate(${-3 * mapLimX}px, ${-1.5 * mapLimY}px)`,
+            <svg className={mapStyles.mapShadow} width={`${mapLimX * 2}px`} height={`${mapLimY * 4}px`} style={{zIndex:"200",transform:`translate(${-3 * mapLimX}px, ${-1.5 * mapLimY}px)`,
                 WebkitTransform:`translate(${-3 * mapLimX}px, ${-1.5 * mapLimY}px)`,msTransform:`translate(${-3 * mapLimX}px, ${-1.5 * mapLimY}px)`}}></svg>
-            <svg className={mapStyles.mapShadow} width={`${mapLimX * 2}px`} height={`${mapLimY * 4}px`} style={{zIndex:"102",transform:`translate(${2 * mapLimX}px, ${-1.5 * mapLimY}px)`,
+            <svg className={mapStyles.mapShadow} width={`${mapLimX * 2}px`} height={`${mapLimY * 4}px`} style={{zIndex:"200",transform:`translate(${2 * mapLimX}px, ${-1.5 * mapLimY}px)`,
                 WebkitTransform:`translate(${2 * mapLimX}px, ${-1.5 * mapLimY}px)`,msTransform:`translate(${2 * mapLimX}px, ${-1.5 * mapLimY}px)`}}></svg>
-            <svg className={mapStyles.mapShadow} width={`${mapLimX * 4}px`} height={`${mapLimY}px`} style={{zIndex:"102",transform:`translate(${-1.5 * mapLimX}px, ${-2 * mapLimY}px)`,
-                WebkitTransform:`translate(${-1.5 * mapLimX}px, ${-2 * mapLimY}px)`,msTransform:`translate(${-1.5 * mapLimX}px, ${-2 * mapLimY}px)`}}></svg>
-            <svg className={mapStyles.mapShadow} width={`${mapLimX * 4}px`} height={`${mapLimY}px`} style={{zIndex:"102",transform:`translate(${-1.5 * mapLimX}px, ${2 * mapLimY}px)`,
+            <svg className={mapStyles.mapShadow} width={`${mapLimX * 4}px`} height={`${mapLimY * 2}px`} style={{zIndex:"200",transform:`translate(${-1.5 * mapLimX}px, ${-3 * mapLimY}px)`,
+                WebkitTransform:`translate(${-1.5 * mapLimX}px, ${-3 * mapLimY}px)`,msTransform:`translate(${-1.5 * mapLimX}px, ${-3 * mapLimY}px)`}}></svg>
+            <svg className={mapStyles.mapShadow} width={`${mapLimX * 4}px`} height={`${mapLimY * 2}px`} style={{zIndex:"200",transform:`translate(${-1.5 * mapLimX}px, ${2 * mapLimY}px)`,
                 WebkitTransform:`translate(${-1.5 * mapLimX}px, ${2 * mapLimY}px)`,msTransform:`translate(${-1.5 * mapLimX}px, ${2 * mapLimY}px)`}}></svg>
             <div style={{pointerEvents:'none',zIndex:"200",boxShadow:'inset 0 0 300px 400px #4B5B96',width:`${mapLimX * 3}px`,height:`${mapLimY * 3}px`,transform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,
                 WebkitTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,msTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`}}></div>
-            <LambertConformalConicMap className={`${stateStyles.mainland}`} width={8000} height={7000} style={{left:-2800,top:-3100}}/>
+            <LandProjectionLLC width={8000} height={7000} style={{zIndex:'-50',left:-2800,top:-3100}}/>
+            <LabelProjectionLLC width={8000} height={7000} style={{zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
             
             {states.map((state, index) => (
               <>
@@ -318,7 +350,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
                     <div style={{left:Number(state.x) + Number(state.xLabel), top:Number(state.y) + Number(state.yLabel), width:Number(state.width) + 5, height:Number(state.height) + 5,
                         fontSize: 6 * Math.pow((2/3) * Number(state.width) + (1/3) * Number(state.height), 0.3)}}>
                       <h2 className={`${stateStyles.state} ${stateStyles.stateLabel} ${(Number(convertDateToDecimal(state.stateDate)) > timeYear) && stateStyles.nonStateLabel}`}
-                            style={{opacity: `${(inHidden == index || locSel == state.id) ? 1 : 0}`}}>
+                            style={{transformOrigin:`center center`,transform:`scale(${0.4 / mapScale + 0.4})`,opacity: `${(inHidden == index || locSel == state.id) ? 1 : 0}`}}>
                         {state.displayName + ((Number(convertDateToDecimal(state.stateDate)) > timeYear) ? ' Territory' : '')}
                       </h2>
                     </div>
@@ -329,11 +361,16 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
             {locations.map((location, index) => (
               <>
-                <div style={{transformOrigin:`top left`,transform:`scale(${0.6 / mapScale + 0.4})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:110,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
+                <div style={{transformOrigin:`top left`,transform:`scale(${0.6 / mapScale + 0.4})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:115,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
                   <div className={`${mapStyles.locationDot}`} style={{opacity:(locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) || locSel == location.id) ? 1 : 0.3}}></div>
                   <h3 className={`${mapStyles.locationLabel} ${(!locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) && locSel != location.id) && mapStyles.locationLabelHidden}`}>{location.displayName}</h3>
                 </div>
               </>
+            ))}
+
+            {events.map((event, i) => (event?.location) && (
+              <MapSvg width={40} height={40} style={{top:'-30px',left:'-20px',pointerEvents:'fill',zIndex:115,position:'absolute',transformOrigin:`top left`,transform:`translate(${getLocX(event) || 0}px, ${getLocY(event) || 0}px)`}}
+                  name={'pin'} onCompleted={onCompleted} onError={onError}/>
             ))}
 
           </div>

@@ -43,6 +43,30 @@
     position: absolute;
 }
 
+.lccLand {
+    fill: #7780AC;
+    z-index: -50;
+    overflow: hidden;
+    position: absolute;
+}
+.lccWater {
+    fill: #4B5B96;
+    z-index: -49;
+    overflow: hidden;
+    position: absolute;
+}
+.lccLabel {
+    opacity: 0.2;
+    z-index: 101;
+    overflow: hidden;
+    position: absolute;
+    pointer-events: none;
+    font-size: 10px;
+    font-style: italic;
+    text-transform: uppercase;
+    fill: #ffffff;
+}
+
 .locationDot {
     position: absolute;
     top: -0.25rem;

@@ -31,21 +31,11 @@
     fill: #aab2d4;
 }
 
-.mainland {
-    fill: #7780AC;
-    z-index: -50;
-    overflow: hidden;
-    position: absolute;
-}
-.mainland:hover {
-    fill: #7780AC;
-}
-
 .stateLabel {
     display: flex;
     position: absolute;
     overflow: visible;
-    z-index: 101;
+    z-index: 111;
     width: 100%;
     height: 70%;
     text-align: center;
