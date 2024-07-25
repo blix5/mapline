@@ -3,19 +3,21 @@ import * as d3 from 'd3';
 import ogLandData from '../../public/map/geojson/land.geojson';
 import ogWaterData from '../../public/map/geojson/lakes.geojson';
 import labelData from '../../public/map/geojson/labels.geojson';
-import elevationPointData from '../../public/map/geojson/elevation_points.geojson'
-import marineLabelData from '../../public/map/geojson/marine_labels.geojson'
-import regionPointData from '../../public/map/geojson/region_points.geojson'
+import elevationPointData from '../../public/map/geojson/elevation_points.geojson';
+import marineLabelData from '../../public/map/geojson/marine_labels.geojson';
+import regionPointData from '../../public/map/geojson/region_points.geojson';
+import riverData from '../../public/map/geojson/rivers.geojson';
 
 import mapStyles from '../../styles/map/map.module.css';
 
 const simplify = require('simplify-geojson');
 
+const rotation = 95.65;
 const tolerance = 0.02;
 const landData = simplify(ogLandData, tolerance);
 const waterData = simplify(ogWaterData, tolerance);
 
-export const LandProjectionLLC = ({ width, height, ...rest }) => {
+export const LandProjectionLCC = ({ width, height, ...rest }) => {
   const svgRef = useRef(null);
 
   useEffect(() => {
@@ -23,7 +25,7 @@ export const LandProjectionLLC = ({ width, height, ...rest }) => {
 
     const projection = d3.geoConicConformal()
       .parallels([31, 48])
-      .rotate([95.65, 0])
+      .rotate([rotation, 0])
       .center([0, 36.5])
       .scale(2520)
       .translate([4051, 3874]);
@@ -48,7 +50,7 @@ export const LandProjectionLLC = ({ width, height, ...rest }) => {
   return <svg ref={svgRef} width={width} height={height} {...rest}></svg>;
 };
 
-export const LabelProjectionLLC = ({ width, height, ...rest }) => {
+export const LabelProjectionLCC = ({ width, height, ...rest }) => {
   const svgRef = useRef(null);
 
   useEffect(() => {
@@ -56,13 +58,28 @@ export const LabelProjectionLLC = ({ width, height, ...rest }) => {
 
     const projection = d3.geoConicConformal()
       .parallels([31, 48])
-      .rotate([95.65, 0])
+      .rotate([rotation, 0])
       .center([0, 36.5])
       .scale(2520)
       .translate([4051, 3874]);
 
     const path = d3.geoPath().projection(projection);
     svg.selectAll("*").remove();
+
+    svg.selectAll(`.${mapStyles.lccWater}`)
+      .data(waterData.features)
+      .enter().append('path')
+      .attr('d', path)
+      .attr('opacity', 0.4)
+      .attr('class', mapStyles.lccWater);
+
+    svg.selectAll(`.${mapStyles.lccRivers}`)
+      .data(riverData.features)
+      .enter().append('path')
+      .attr('d', path)
+      .attr('stroke-width', d => (d.properties.strokeweig || 0.2) * 1.5)
+      .attr('opacity', 0.6)
+      .attr('class', mapStyles.lccRivers);
 
     svg.selectAll(`.${mapStyles.lccLabel}`)
       .data(marineLabelData.features)
@@ -109,10 +126,51 @@ export const LabelProjectionLLC = ({ width, height, ...rest }) => {
   return <svg ref={svgRef} width={width} height={height} {...rest}></svg>;
 };
 
+export const RiverLabelProjectionLCC = ({ width, height, ...rest }) => {
+  const svgRef = useRef(null);
+
+  useEffect(() => {
+    const svg = d3.select(svgRef.current);
+
+    const projection = d3.geoConicConformal()
+      .parallels([31, 48])
+      .rotate([rotation, 0])
+      .center([0, 36.5])
+      .scale(2520)
+      .translate([4051, 3874]);
+
+    const path = d3.geoPath().projection(projection);
+    svg.selectAll("*").remove();
+
+    svg.selectAll(`.${mapStyles.lccRiverLabel}`)
+      .data(riverData.features)
+      .enter().append('text')
+      .attr('x', d => {
+        const coordinates = d.geometry.type === 'Point'
+          ? d.geometry.coordinates
+          : d3.geoCentroid(d);
+        return projection(coordinates)[0];
+      })
+      .attr('y', d => {
+        const coordinates = d.geometry.type === 'Point'
+          ? d.geometry.coordinates
+          : d3.geoCentroid(d);
+        return projection(coordinates)[1];
+      })
+      .attr('dy', '.35em')
+      .attr('text-anchor', 'middle')
+      .text(d => d.properties.label)
+      .attr('class', mapStyles.lccRiverLabel);
+
+  }, []);
+
+  return <svg ref={svgRef} width={width} height={height} {...rest}></svg>;
+};
+
 const getLCCProjection = () => {
   return d3.geoConicConformal()
     .parallels([31, 48])
-    .rotate([95.65, 0])
+    .rotate([rotation, 0])
     .center([0, 36.5])
     .scale(2520)
     .translate([4051, 3874]);
@@ -137,7 +195,7 @@ export const latLonToY = (lat, lon) => {
 
     const projection = d3.geoConicConformal()
       .parallels([31, 48])
-      .rotate([95.65, 0])
+      .rotate([rotation, 0])
       .center([0, 36.5])
       .scale(2520)
       .translate([4051, 3874]);

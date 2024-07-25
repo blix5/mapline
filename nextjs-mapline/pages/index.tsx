@@ -22,7 +22,7 @@ import { getStateList, getLocations, getTimeline } from '../libs/sheets';
 
 import State from '../libs/map/State';
 import MapSvg from '../libs/map/MapSvg';
-import { LandProjectionLLC, LabelProjectionLLC, latLonToX, latLonToY } from '../libs/map/LambertConformalConicMap';
+import { LandProjectionLCC, LabelProjectionLCC, RiverLabelProjectionLCC, latLonToX, latLonToY } from '../libs/map/LambertConformalConicMap';
 import FilterIcon from '../libs/FilterIcon';
 import Icon from '../libs/Icon';
 
@@ -157,15 +157,15 @@ export default function Home({ states, locations, events, onCompleted, onError }
     const delta = e.deltaY * -0.003;
     var newScale = mapScale + delta;
     if(newScale < 0.25) newScale = 0.25;
-    else if(newScale > 2) newScale = 2;
+    else if(newScale > 7) newScale = 7;
 
     const ratio = 1 - newScale / mapScale;
     const mapHeight = (height - 64) * borderY;
 
     var newX = mapX + (e.clientX - mapX) * ratio;
-    var newY = mapY + (e.clientY - mapY) * ratio;
-    if(newX > width / 2) newX = width / 2; else if(newX < width / 2 - mapLimX * mapScale) newX = width / 2 - mapLimX * mapScale;
-    if(newY > mapHeight / 2) newY = mapHeight / 2; else if(newY < mapHeight / 2 - mapLimY * mapScale) newY = mapHeight / 2 - mapLimY * mapScale;
+    var newY = mapY + ((e.clientY - 78) - mapY) * ratio;
+    if(newX > width / 2) newX = width / 2; else if(newX < width / 2 - (mapLimX * 2) * mapScale) newX = width / 2 - (mapLimX * 2) * mapScale;
+    if(newY > mapHeight / 2) newY = mapHeight / 2; else if(newY < mapHeight / 2 - (mapLimY * 2) * mapScale) newY = mapHeight / 2 - (mapLimY * 2) * mapScale;
 
     setMapX(newX);
     setMapY(newY);
@@ -295,6 +295,18 @@ export default function Home({ states, locations, events, onCompleted, onError }
     return Math.sqrt(Math.pow(Math.abs(posX - (mousePos.x - mapX) / mapScale), 2) + Math.pow(Math.abs(posY - (mousePos.y - mapY - 70) / mapScale), 2)) < (25 / mapScale);
   }
 
+  const eventVisible = (event) => {
+    return Math.abs((((convertDateToDecimal(event.startDate) - startYear) * timeScale) + (timeScale * 0.4)) - (timeX + (width / 2))) < (width / 2 + 130);
+  }
+  const indexAtLoc = (event) => {
+    const eventsVisible = events.filter(e => e !== null && e !== undefined && eventVisible(e) && e.location == event.location);
+    return eventsVisible.indexOf(event);
+  }
+  const eventsAtLocLen = (event) => {
+    const eventsVisible = events.filter(e => e !== null && e !== undefined && eventVisible(e) && e.location == event.location);
+    return eventsVisible.length;
+  }
+
   React.useEffect(() => {
     const timer = setTimeout(() => {
       timelineRef.current.scrollLeft = timeX;
@@ -333,8 +345,9 @@ export default function Home({ states, locations, events, onCompleted, onError }
                 WebkitTransform:`translate(${-1.5 * mapLimX}px, ${2 * mapLimY}px)`,msTransform:`translate(${-1.5 * mapLimX}px, ${2 * mapLimY}px)`}}></svg>
             <div style={{pointerEvents:'none',zIndex:"200",boxShadow:'inset 0 0 300px 400px #4B5B96',width:`${mapLimX * 3}px`,height:`${mapLimY * 3}px`,transform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,
                 WebkitTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,msTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`}}></div>
-            <LandProjectionLLC width={8000} height={7000} style={{zIndex:'-50',left:-2800,top:-3100}}/>
-            <LabelProjectionLLC width={8000} height={7000} style={{zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+            <LandProjectionLCC width={8000} height={7000} style={{zIndex:'-50',left:-2800,top:-3100}}/>
+            <LabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s ease`,opacity:`${mapScale > 0.8 ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+            <RiverLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s ease`,opacity:`${mapScale > 2.5 ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
             
             {states.map((state, index) => (
               <>
@@ -343,14 +356,15 @@ export default function Home({ states, locations, events, onCompleted, onError }
                     <State name={state.name} className={`${stateStyles.state} ${locSel == state.id && ((Number(convertDateToDecimal(state.stateDate)) > timeYear) ? stateStyles.nonStateHover : stateStyles.stateHover)}
                         ${(Number(convertDateToDecimal(state.stateDate)) > timeYear) && stateStyles.nonState}`}
                         width={Number(state.width) + 5} height={Number(state.height) + 5}
-                        style={{left:Number(state.x),top:Number(state.y)}} onCompleted={onCompleted} onError={onError} id={state.id}
+                        style={{left:Number(state.x),top:Number(state.y),strokeWidth:`${0.4 / mapScale + 0.2}rem`}}
+                        onCompleted={onCompleted} onError={onError} id={state.id}
                         onMouseEnter={() => (setInHidden(index))}
                         onMouseLeave={() => inHidden == index && setInHidden(-1)}
                     />
                     <div style={{left:Number(state.x) + Number(state.xLabel), top:Number(state.y) + Number(state.yLabel), width:Number(state.width) + 5, height:Number(state.height) + 5,
                         fontSize: 6 * Math.pow((2/3) * Number(state.width) + (1/3) * Number(state.height), 0.3)}}>
                       <h2 className={`${stateStyles.state} ${stateStyles.stateLabel} ${(Number(convertDateToDecimal(state.stateDate)) > timeYear) && stateStyles.nonStateLabel}`}
-                            style={{transformOrigin:`center center`,transform:`scale(${0.4 / mapScale + 0.4})`,opacity: `${(inHidden == index || locSel == state.id) ? 1 : 0}`}}>
+                            style={{transformOrigin:`center center`,transform:`scale(${0.4 / mapScale + 0.3})`,opacity: `${(inHidden == index || locSel == state.id) ? 0.6 : 0}`}}>
                         {state.displayName + ((Number(convertDateToDecimal(state.stateDate)) > timeYear) ? ' Territory' : '')}
                       </h2>
                     </div>
@@ -368,8 +382,9 @@ export default function Home({ states, locations, events, onCompleted, onError }
               </>
             ))}
 
-            {events.map((event, i) => (event?.location) && (
-              <MapSvg width={40} height={40} style={{top:'-30px',left:'-20px',pointerEvents:'fill',zIndex:115,position:'absolute',transformOrigin:`top left`,transform:`translate(${getLocX(event) || 0}px, ${getLocY(event) || 0}px)`}}
+            {events.map((event, i) => (event?.location && getLocX(event) !== null && eventVisible(event) && indexAtLoc(event) == 0) && (
+              <MapSvg className={`${timelineStyles.eventsp} ${timelineStyles[event.category + 'p']}`} width={40} height={30} style={{opacity:0.4 + (eventsAtLocLen(event) / 10),
+                  transformOrigin:`bottom center`,transform:`translate(${getLocX(event)}px, ${getLocY(event)}px) scale(${0.9 / mapScale + 0.4})`}}
                   name={'pin'} onCompleted={onCompleted} onError={onError}/>
             ))}
 

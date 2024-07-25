@@ -55,9 +55,21 @@
     overflow: hidden;
     position: absolute;
 }
+.lccRivers {
+    stroke: #4B5B96;
+    z-index: 112;
+    fill: none;
+}
+.lccRiverLabel {
+    opacity: 0.2;
+    overflow: hidden;
+    position: absolute;
+    pointer-events: none;
+    font-size: 4px;
+    fill: #3b3b43;
+}
 .lccLabel {
     opacity: 0.2;
-    z-index: 101;
     overflow: hidden;
     position: absolute;
     pointer-events: none;
