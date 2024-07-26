@@ -10,9 +10,6 @@
     background-color: #4B5B96;
 }
 
-.draggableMap {
-}
-
 .draggableMapSlow {
     transition: transform 0.5s ease;
     -webkit-transition: -webkit-transform 0.5s ease;
@@ -45,13 +42,11 @@
 
 .lccLand {
     fill: #7780AC;
-    z-index: -50;
     overflow: hidden;
     position: absolute;
 }
 .lccWater {
     fill: #4B5B96;
-    z-index: -49;
     overflow: hidden;
     position: absolute;
 }
@@ -60,12 +55,18 @@
     z-index: 112;
     fill: none;
 }
+.lccRiversLow {
+    stroke: #4B5B96;
+    stroke-width: 3px;
+    z-index: 112;
+    fill: none;
+}
 .lccRiverLabel {
     opacity: 0.2;
     overflow: hidden;
     position: absolute;
     pointer-events: none;
-    font-size: 4px;
+    font-size: 3px;
     fill: #3b3b43;
 }
 .lccLabel {
@@ -73,7 +74,6 @@
     overflow: hidden;
     position: absolute;
     pointer-events: none;
-    font-size: 10px;
     font-style: italic;
     text-transform: uppercase;
     fill: #ffffff;
@@ -95,8 +95,8 @@
     font-weight: 100;
     font-size: 18px;
     color: white;
-    filter: drop-shadow(0 0 0.25rem rgba(0,0,0,0.65));
-    -webkit-filter: drop-shadow(0 0 0.25rem rgba(0,0,0,0.65)) blur(0);
+    filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.5));
+    -webkit-filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.5)) blur(0);
     transition: opacity 0.3s ease, margin 0.3s ease-out, filter 0.3s ease;
 
     -webkit-user-select: none;
@@ -106,8 +106,8 @@
 
 .locationLabelHidden {
     margin-left: -0.5rem;
-    filter: drop-shadow(0 0 0.25rem rgba(0,0,0,0.65)) blur(0.1rem);
-    -webkit-filter: drop-shadow(0 0 0.25rem rgba(0,0,0,0.65)) blur(0.1rem);
+    filter: blur(0.1rem);
+    -webkit-filter: blur(0.1rem);
     opacity: 0;
     transition: opacity 0.3s ease, margin 0.3s ease-out, filter 0.3s ease;
 }

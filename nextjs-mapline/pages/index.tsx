@@ -22,7 +22,7 @@ import { getStateList, getLocations, getTimeline } from '../libs/sheets';
 
 import State from '../libs/map/State';
 import MapSvg from '../libs/map/MapSvg';
-import { LandProjectionLCC, LabelProjectionLCC, RiverLabelProjectionLCC, latLonToX, latLonToY } from '../libs/map/LambertConformalConicMap';
+import { LowProjectionLCC, LowTopProjectionLCC, MediumProjectionLCC, MediumTopProjectionLCC, MediumTopLabelProjectionLCC, MediumTopRiverLabelProjectionLCC, HighTopLabelProjectionLCC, latLonToX, latLonToY } from '../libs/map/LambertConformalConicMap';
 import FilterIcon from '../libs/FilterIcon';
 import Icon from '../libs/Icon';
 
@@ -83,7 +83,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const mapMouseUp = (e) => {
       const {x, y} = tempMousePos.current;
       if (Math.abs(e.clientX - x) < 2 && Math.abs(e.clientY - y) < 2) {
-          setLocSel(null);
+          setLocSel(location);
       }
   }
 
@@ -170,7 +170,14 @@ export default function Home({ states, locations, events, onCompleted, onError }
     setMapX(newX);
     setMapY(newY);
     setMapScale(newScale);
+    setMapScrolling(true);
   };
+
+  const [mapScrolling, setMapScrolling] = React.useState(false);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setMapScrolling(false), 500);
+    return () => clearTimeout(timer);
+  }, [mapScrolling]);
 
   const onMapDrag = (data) => {
     const mapHeight = (height - 64) * borderY;
@@ -270,6 +277,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
           const statePosY = Number(locSel.y) + (Number(locSel.height) / 2)
           const newMapY = ((height - 64) * borderY / 2) - (statePosY * mapScale);
           setMapY(newMapY);
+          setMapScrolling(true);
           setLocSel(event.location);
         } else if(isListedAsLoc(event.location)) {
           const locSel = getLocation(event.location);
@@ -279,6 +287,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
           const locPosY = latLonToY(Number(locSel.lat), Number(locSel.long));
           const newMapY = ((height - 64) * borderY / 2) - (locPosY * mapScale);
           setMapY(newMapY);
+          setMapScrolling(true);
           setLocSel(event.location);
         } else {
           setLocSel(null);
@@ -292,7 +301,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
   }
 
   const locHoverNear = (posX, posY) => {
-    return Math.sqrt(Math.pow(Math.abs(posX - (mousePos.x - mapX) / mapScale), 2) + Math.pow(Math.abs(posY - (mousePos.y - mapY - 70) / mapScale), 2)) < (25 / mapScale);
+    return Math.sqrt(Math.pow(Math.abs(posX - (mousePos.x - mapX) / mapScale), 2) + Math.pow(Math.abs(posY - (mousePos.y - mapY - 70) / mapScale), 2)) < (8 / mapScale);
   }
 
   const eventVisible = (event) => {
@@ -331,7 +340,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
         <DraggableCore onDrag={(e, data) => {onMapDrag(data)}} onStart={() => setIsDragging(true)} onStop={() => setIsDragging(false)}>
           <div onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} style={{position:"absolute",width:"100%",height:"100%",zIndex:100,transform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,WebkitTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,
               msTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,transformOrigin:"top left",WebkitTransformOrigin:"top left",msTransformOrigin:"top left"}}
-              className={`${(hoverTimeline && !isDragging) ? mapStyles.draggableMapSlow : mapStyles.draggableMap}`} onMouseDownCapture={mapMouseDown} onMouseUpCapture={mapMouseUp}>
+              className={`${(mapScrolling && !isDragging) && mapStyles.draggableMapSlow}`} onMouseDownCapture={mapMouseDown} onMouseUpCapture={mapMouseUp}>
 
             <svg className={mapStyles.ocean} width={`${mapLimX * 3}px`} height={`${mapLimY * 3}px`} style={{zIndex:"-100",transform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,
                 WebkitTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,msTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`}} ></svg>
@@ -345,9 +354,28 @@ export default function Home({ states, locations, events, onCompleted, onError }
                 WebkitTransform:`translate(${-1.5 * mapLimX}px, ${2 * mapLimY}px)`,msTransform:`translate(${-1.5 * mapLimX}px, ${2 * mapLimY}px)`}}></svg>
             <div style={{pointerEvents:'none',zIndex:"200",boxShadow:'inset 0 0 300px 400px #4B5B96',width:`${mapLimX * 3}px`,height:`${mapLimY * 3}px`,transform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,
                 WebkitTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`,msTransform:`translate(${-1 * mapLimX}px, ${-1 * mapLimY}px)`}}></div>
-            <LandProjectionLCC width={8000} height={7000} style={{zIndex:'-50',left:-2800,top:-3100}}/>
-            <LabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s ease`,opacity:`${mapScale > 0.8 ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
-            <RiverLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s ease`,opacity:`${mapScale > 2.5 ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+            
+            {(mapScale < 0.6) ? (
+              <>
+                <LowProjectionLCC width={8000} height={7000} style={{zIndex:'-50',left:-2800,top:-3100}}/>
+                <LowTopProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${mapScale < 0.6 ? 1 : 0}`,zIndex:'110',left:-2800,top:-3100}}/>
+              </>
+            ) : (
+              <>
+                <MediumProjectionLCC width={8000} height={7000} style={{zIndex:'-50',pointerEvents:'none',left:-2800,top:-3100}}/>
+                <MediumTopProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 0.6) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+                {(mapScale > 4) ? (
+                  <HighTopLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${mapScale > 4 ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+                ) : (
+                  (mapScale >= 1.3) && (
+                    <MediumTopLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 1.3 && mapScale <= 4) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+                  )
+                )}
+                {(mapScale >= 2.5) && (
+                  <MediumTopRiverLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 2.5) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+                )}
+              </>
+            )}
             
             {states.map((state, index) => (
               <>
@@ -375,17 +403,26 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
             {locations.map((location, index) => (
               <>
-                <div style={{transformOrigin:`top left`,transform:`scale(${0.6 / mapScale + 0.4})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:115,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
+                <div style={{transformOrigin:`top left`,transform:`scale(${0.7 / mapScale + 0.1})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:115,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
                   <div className={`${mapStyles.locationDot}`} style={{opacity:(locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) || locSel == location.id) ? 1 : 0.3}}></div>
                   <h3 className={`${mapStyles.locationLabel} ${(!locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) && locSel != location.id) && mapStyles.locationLabelHidden}`}>{location.displayName}</h3>
                 </div>
               </>
             ))}
 
-            {events.map((event, i) => (event?.location && getLocX(event) !== null && eventVisible(event) && indexAtLoc(event) == 0) && (
-              <MapSvg className={`${timelineStyles.eventsp} ${timelineStyles[event.category + 'p']}`} width={40} height={30} style={{opacity:0.4 + (eventsAtLocLen(event) / 10),
-                  transformOrigin:`bottom center`,transform:`translate(${getLocX(event)}px, ${getLocY(event)}px) scale(${0.9 / mapScale + 0.4})`}}
-                  name={'pin'} onCompleted={onCompleted} onError={onError}/>
+            {events.map((event, i) => (event?.location && getLocX(event) !== null && eventVisible(event)) && (
+              <MapSvg className={`${timelineStyles.eventsp} ${timelineStyles[event.category + 'p']} ${eventSelected == event.id && timelineStyles.selectedPin}`} width={40} height={30} style={{transformOrigin:`bottom center`,
+                  transform:`translate(${getLocX(event)}px, ${getLocY(event)}px) scale(${(0.9 / mapScale + 0.1) * (eventSelected == event.id ? 1.3 : 1)}) rotate(${(indexAtLoc(event) * 30)}deg)`}}
+                  name={'pin_copy'} onCompleted={onCompleted} onError={onError} onMouseDownCapture={mapMouseDown}
+                  onMouseUpCapture={(e) => {
+                    const {x, y} = tempMousePos.current;
+                    if (Math.abs(e.clientX - x) < 2 && Math.abs(e.clientY - y) < 2) {
+                      eventClick(event, ((convertDateToDecimal(event.startDate) - startYear) * timeScale) + (timeScale * 0.4),
+                          (categoryToIndex(event.category) * 65 * 2) + (isEvenIndexInCategory(event, events) ? 0 : 65) - ((height - ((height - 64) * borderY) - 200) / 2));
+                    }
+                  }
+                }
+              />
             ))}
 
           </div>
@@ -464,6 +501,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
             </div>
           ))}
 
+          {/* VERTICAL LINES */}
           {[...Array(endYear - startYear + 1)].map((e, i) => (
             (Math.abs((i * timeScale) - timeX) < width * 2) && (
             <>
@@ -478,6 +516,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
             </>)
           ))}
 
+          {/* HORIZONTAL LINES */}
           {[...Array((7 * 2) + 1)].map((e, i) => (
             (Math.abs((i * timeScale) - timeY) < height * 2) && (
             <>
@@ -499,9 +538,11 @@ export default function Home({ states, locations, events, onCompleted, onError }
           {[...Array(endYear - startYear + 1)].map((e, i) => (
             (Math.abs((i * timeScale) - timeX) < width * 2) && (
               <>
-                <h2 style={{transform:`translate(${(i * timeScale)}px, 0rem)`,WebkitTransform:`translate(${(i * timeScale)}px, 0rem)`,msTransform:`translate(${(i * timeScale)}px, 0rem)`,width:`${timeScale}px`,textAlign:'center'}}>
-                  {(i + startYear)}
-                </h2>
+                {(timeScale > 100 || i % 2 == 0) && (
+                  <h2 style={{transform:`translate(${(i * timeScale)}px, 0rem)`,WebkitTransform:`translate(${(i * timeScale)}px, 0rem)`,msTransform:`translate(${(i * timeScale)}px, 0rem)`,width:`${timeScale}px`,textAlign:'center'}}>
+                    {(i + startYear)}
+                  </h2>
+                )}
                 <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,
                     msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'1rem',top:0,backgroundColor:'#E9EAF3'}}></div>
                 <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,

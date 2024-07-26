@@ -212,7 +212,17 @@
     left: -20px;
     pointer-events: none;
     z-index: 115;
+    filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.15));
+    -webkit-filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.15));
+    opacity: 0.7;
+
+    transition: fill 0.2s ease, filter 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+}
+.eventsp:hover, .selectedPin {
     filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.3));
+    -webkit-filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.3));
+    opacity: 1;
+    z-index: 120;
 }
 
 .eventRange {
@@ -300,11 +310,10 @@
     box-shadow: none;
     color: #A38B31;
 }
-.event:hover {
-    background-color: #f7ebb3;
-}
+.event:hover { background-color: #f7ebb3; }
 .eventl { background-color: #A38B31; }
 .eventp { fill: #F7E38A; }
+.eventp:hover { fill: #f7ebb3; }
 .eventDiv:hover .evente, .eventDiv .selectedEvent .evente { background-color: #A38B31; }
 .eventDiv:hover .eventArrow, .eventDiv .selectedEvent .eventArrow { fill: #F7E38A; }
 
@@ -320,11 +329,10 @@
     box-shadow: none;
     color: #3E7B2E;
 }
-.legislation:hover {
-    background-color: #bae9b1;
-}
+.legislation:hover { background-color: #bae9b1; }
 .legislationl { background-color: #3E7B2E; }
 .legislationp { fill: #98de8e; }
+.legislationp:hover { fill: #bae9b1; }
 .eventDiv:hover .legislatione, .eventDiv .selectedEvent .legislatione { background-color: #3E7B2E; }
 .eventDiv:hover .legislationArrow, .eventDiv .selectedEvent .legislationArrow { fill: #98de8e; }
 
@@ -340,11 +348,10 @@
     box-shadow: none;
     color: #75337c;
 }
-.foreign:hover {
-    background-color: #dcb8e4;
-}
+.foreign:hover { background-color: #dcb8e4; }
 .foreignl { background-color: #75337c; }
 .foreignp { fill: #d291e0; }
+.foreignp:hover { fill: #dcb8e4; }
 .eventDiv:hover .foreigne, .eventDiv .selectedEvent .foreigne { background-color: #75337c; }
 .eventDiv:hover .foreignArrow, .eventDiv .selectedEvent .foreignArrow { fill: #d291e0; }
 
@@ -360,11 +367,10 @@
     box-shadow: none;
     color: #426263;
 }
-.work:hover {
-    background-color: #9fd7d9;
-}
+.work:hover { background-color: #9fd7d9; }
 .workl { background-color: #426263; }
 .workp { fill: #72c2c5; }
+.workp:hover { fill: #9fd7d9; }
 .eventDiv:hover .worke, .eventDiv .selectedEvent .worke { background-color: #426263; }
 .eventDiv:hover .workArrow, .eventDiv .selectedEvent .workArrow { fill: #72c2c5; }
 
@@ -380,10 +386,10 @@
     box-shadow: none;
     color: #853030;
 }
-.ruling:hover {
-    background-color: #dca7a7;
-}
+.ruling:hover { background-color: #dca7a7; }
 .rulingl { background-color: #853030; }
+.rulingp { fill: #d28b8b; }
+.rulingp:hover { fill: #dca7a7; }
 .eventDiv:hover .rulinge, .eventDiv .selectedEvent .rulinge { background-color: #853030; }
 .eventDiv:hover .rulingArrow, .eventDiv .selectedEvent .rulingArrow { fill: #d28b8b; }
 
