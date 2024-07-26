@@ -170,7 +170,6 @@ export default function Home({ states, locations, events, onCompleted, onError }
     setMapX(newX);
     setMapY(newY);
     setMapScale(newScale);
-    setMapScrolling(true);
   };
 
   const [mapScrolling, setMapScrolling] = React.useState(false);
