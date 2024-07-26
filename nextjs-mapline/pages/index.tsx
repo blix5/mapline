@@ -358,7 +358,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
             {(mapScale < 0.6) ? (
               <>
                 <LowProjectionLCC width={8000} height={7000} style={{zIndex:'-50',left:-2800,top:-3100}}/>
-                <LowTopProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${mapScale < 0.6 ? 1 : 0}`,zIndex:'110',left:-2800,top:-3100}}/>
+                <LowTopProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${mapScale < 0.6 ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
               </>
             ) : (
               <>
