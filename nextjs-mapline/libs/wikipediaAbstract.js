@@ -2,17 +2,17 @@ import ReactDOM from "react-dom";
 import React, { useState, useEffect } from "react";
 
 const convertToApiUrl = (wikiUrl) => {
-    const title = wikiUrl.split('/').pop();
-    const encodedTitle = encodeURIComponent(title);
-    return `https://en.wikipedia.org/w/api.php?action=query&origin=*&prop=extracts&format=json&exintro=&titles=${encodedTitle}`;
+  const title = wikiUrl.split('/').pop();
+  const encodedTitle = encodeURIComponent(title);
+  return `https://en.wikipedia.org/w/api.php?action=query&origin=*&prop=extracts&format=json&exintro=&titles=${encodedTitle}`;
 };
 
-export const UrlToAbstract = ({ url, ...rest }) => {
+export default function UrlToAbstract({ url, ...rest }) {
   const [contents, setContents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState();
 
-  const extractAPIContents = json => {
+  const extractAPIContents = (json) => {
     const { pages } = json.query;
     return Object.keys(pages).map(id => pages[id].extract);
   };
@@ -37,13 +37,14 @@ export const UrlToAbstract = ({ url, ...rest }) => {
     getContents();
   }, [url]);
 
-  if (loading) return "Loading ...";
-  if (error) return "An error occurred";
+  if (loading) return <p>Loading ...</p>;
+  if (error) return <p>An error occurred: {error.message}</p>;
+
   return (
     <>
-      {contents.map(content => (
-        <p {...rest} dangerouslySetInnerHTML={{ __html: content }} />
+      {contents.map((content, index) => (
+        <p key={index} {...rest} dangerouslySetInnerHTML={{ __html: content }} />
       ))}
     </>
   );
-};
+}

@@ -31,7 +31,7 @@ import HoverVisibleDiv from '../libs/HoverVisibleDiv';
 import DecimalYearToDate from '../libs/dateDecimal';
 import categoryToIndex from '../libs/categoryIndex';
 import dateFilterRender from '../libs/dateFilterRender';
-import { UrlToAbstract } from '../libs/wikipediaAbstract';
+import UrlToAbstract from '../libs/wikipediaAbstract';
 
 import compassDimensions from '../libs/map/mapUtils';
 import { p } from 'next-usequerystate/dist/serializer-C_l8WgvO';
