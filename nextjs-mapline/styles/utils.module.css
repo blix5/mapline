@@ -78,12 +78,11 @@
   background-color: transparent;
 }
 .scrollable::-webkit-scrollbar-track-piece {
-  background-color: #ffffff;
-  opacity: 0.2;
+  background-color: rgba(255,255,255,0.2);
   display: none;
 }
 .scrollable::-webkit-scrollbar-thumb {
-  background-color: #9ea0a1;
+  background-color: rgba(255,255,255,0.4);
   -webkit-border-radius: 8px;
   background-clip: padding-box;
   border: 0.2rem solid transparent;
@@ -91,5 +90,5 @@
   height: 20%;
 }
 .scrollable::-webkit-scrollbar-thumb:hover {
-  background-color: #caccce;
+  background-color: rgba(255,255,255,0.7);
 }

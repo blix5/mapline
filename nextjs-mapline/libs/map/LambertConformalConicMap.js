@@ -26,11 +26,11 @@ const mediumLakeData = simplifyData(mediumLakeDataSrc, 0.02);
 const lowRiverData = simplifyData(lowRiverDataSrc, 0.04)
 const mediumRiverData = simplifyData(mediumRiverDataSrc, 0.02);
 
-const mediumLabelData = simplifyData(mediumLabelDataSrc, 0.02);
-const highLabelData = simplifyData(highLabelDataSrc, 0.01);
+const mediumLabelData = mediumLabelDataSrc;
+const highLabelData = highLabelDataSrc;
 
-const mediumMarineLabelData = simplifyData(mediumMarineLabelDataSrc, 0.02);
-const highMarineLabelData = simplifyData(highMarineLabelDataSrc, 0.01);
+const mediumMarineLabelData = mediumMarineLabelDataSrc;
+const highMarineLabelData = highMarineLabelDataSrc;
 
 const rotation = 95.65;
 

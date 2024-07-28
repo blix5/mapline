@@ -216,13 +216,62 @@
     -webkit-filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.15));
     opacity: 0.7;
 
-    transition: fill 0.2s ease, filter 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+    transition: fill 0.3s ease, filter 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
 }
-.eventsp:hover, .selectedPin {
+.eventspMulti {
+    position: absolute;
+    pointer-events: none;
+    z-index: 115;
+    filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.15));
+    -webkit-filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.15));
+    opacity: 0.7;
+
+    transition: fill 0.3s ease, filter 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+}
+.eventspLabel {
+    position: absolute;
+    z-index: 116;
+}
+.eventspLabel h3 {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 100;
+    width: 2rem;
+    left: -1.13rem;
+    top: -2.17rem;
+
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+.eventsp:hover, .eventspMulti:hover, .selectedPin {
     filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.3));
     -webkit-filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.3));
     opacity: 1;
     z-index: 120;
+}
+.eventspList {
+    position: absolute;
+    overflow: hidden;
+    background-color: rgba(0,0,0,0.5);
+    outline: 0.5rem solid rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    left: 1.5rem;
+    opacity: 0.9;
+
+    transition: transform 0.3s ease, height 0.3s ease, width 0.3s ease;
+}
+.eventspListEvent {
+    z-index: 130;
+}
+.eventspListArrow {
+    width: 0;
+    height: 0;
+    left: 0.3rem;
+    opacity: 0.9;
+    border-top: 1.5rem solid transparent;
+    border-bottom: 1.5rem solid transparent;
+    border-right: 1.5rem solid rgba(0,0,0,0.5);
 }
 
 .eventRange {
@@ -316,6 +365,10 @@
 .eventp:hover { fill: #f7ebb3; }
 .eventDiv:hover .evente, .eventDiv .selectedEvent .evente { background-color: #A38B31; }
 .eventDiv:hover .eventArrow, .eventDiv .selectedEvent .eventArrow { fill: #F7E38A; }
+.eventText {
+    color: #f7ebb3;
+    background: linear-gradient(to right, rgba(163, 139, 49, 0.3) calc(0%), transparent 100%);
+}
 
 .legislation {
     background-color: #98de8e;
@@ -335,6 +388,10 @@
 .legislationp:hover { fill: #bae9b1; }
 .eventDiv:hover .legislatione, .eventDiv .selectedEvent .legislatione { background-color: #3E7B2E; }
 .eventDiv:hover .legislationArrow, .eventDiv .selectedEvent .legislationArrow { fill: #98de8e; }
+.legislationText {
+    color: #bae9b1;
+    background: linear-gradient(to right, rgba(62, 123, 46, 0.3) calc(0%), transparent 100%);
+}
 
 .foreign {
     background-color: #d291e0;
@@ -354,6 +411,10 @@
 .foreignp:hover { fill: #dcb8e4; }
 .eventDiv:hover .foreigne, .eventDiv .selectedEvent .foreigne { background-color: #75337c; }
 .eventDiv:hover .foreignArrow, .eventDiv .selectedEvent .foreignArrow { fill: #d291e0; }
+.foreignText {
+    color: #dcb8e4;
+    background: linear-gradient(to right, rgba(118, 51, 125, 0.3) calc(0%), transparent 100%);
+}
 
 .work {
     background-color: #72c2c5;
@@ -373,6 +434,10 @@
 .workp:hover { fill: #9fd7d9; }
 .eventDiv:hover .worke, .eventDiv .selectedEvent .worke { background-color: #426263; }
 .eventDiv:hover .workArrow, .eventDiv .selectedEvent .workArrow { fill: #72c2c5; }
+.workText {
+    color: #9fd7d9;
+    background: linear-gradient(to right, rgba(66, 98, 99, 0.3) calc(0%), transparent 100%);
+}
 
 .ruling {
     background-color: #d28b8b;
@@ -392,6 +457,10 @@
 .rulingp:hover { fill: #dca7a7; }
 .eventDiv:hover .rulinge, .eventDiv .selectedEvent .rulinge { background-color: #853030; }
 .eventDiv:hover .rulingArrow, .eventDiv .selectedEvent .rulingArrow { fill: #d28b8b; }
+.rulingText {
+    color: #dca7a7;
+    background: linear-gradient(to right, rgba(131, 47, 47, 0.3) calc(0%), transparent 100%);
+}
 
 .selectedEvent {
     z-index: 400;

@@ -125,3 +125,48 @@
     -ms-user-select: none;
     user-select: none;
 }
+
+.infoBox {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 200;
+}
+.infoBoxDivBack {
+    background-color: rgba(0,0,0,0.5);
+    top: 1rem;
+    left: 1rem;
+    border-radius: 1rem;
+    overflow: hidden;
+}
+.infoBoxDiv {
+    top: 1rem;
+    left: 1rem;
+    border-radius: 1rem;
+    overflow-y: scroll;
+    overflow-x: hidden;
+
+    background-clip: text;
+    -webkit-background-clip: text;
+    mask-image: linear-gradient(to bottom, white calc(100% - 6rem), rgba(0,0,0,0) 100%);
+    -webkit-mask-image: linear-gradient(to bottom, white calc(100% - 6rem), rgba(0,0,0,0) 100%);
+}
+.infoBoxDiv * {
+    position: relative;
+}
+.infoBoxDiv h1 {
+    font-weight: bolder;
+    font-family: 'Baskerville', Georgia, Garamond, Times, 'Cambria', 'Times New Roman', serif;
+    font-size: 1.7rem;
+    line-height: 130%;
+    margin: 1rem 0rem 1rem 0rem;
+    padding: 0.4rem 0rem 0.4rem 1rem;
+}
+.infoBoxInfo {
+    font-family: 'Times New Roman', Times, Georgia, Garamond, serif;
+    color: white;
+    font-weight: 100;
+    line-height: 120%;
+    font-size: 0.9rem;
+    margin: 1rem 1rem 2rem 1rem;
+}

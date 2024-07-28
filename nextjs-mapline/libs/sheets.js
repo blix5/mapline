@@ -71,7 +71,8 @@ export async function getTimeline() {
                 location: row[8] ?? null,
                 filter: row[9] ?? null,
                 importance: row[10] ?? 5,
-                parent: row[11] ?? null
+                parent: row[11] ?? null,
+                wikiLink: row[12] ?? null,
             }));
         }
     } catch(err) {

@@ -31,8 +31,10 @@ import HoverVisibleDiv from '../libs/HoverVisibleDiv';
 import DecimalYearToDate from '../libs/dateDecimal';
 import categoryToIndex from '../libs/categoryIndex';
 import dateFilterRender from '../libs/dateFilterRender';
+import { UrlToAbstract } from '../libs/wikipediaAbstract';
 
 import compassDimensions from '../libs/map/mapUtils';
+import { p } from 'next-usequerystate/dist/serializer-C_l8WgvO';
 
 export async function getStaticProps(context) {
   const states = await getStateList();
@@ -81,10 +83,11 @@ export default function Home({ states, locations, events, onCompleted, onError }
     tempMousePos.current = {x: e.clientX, y: e.clientY};
   }
   const mapMouseUp = (e) => {
-      const {x, y} = tempMousePos.current;
-      if (Math.abs(e.clientX - x) < 2 && Math.abs(e.clientY - y) < 2) {
-          setLocSel(location);
-      }
+    const {x, y} = tempMousePos.current;
+    if(Math.abs(e.clientX - x) < 2 && Math.abs(e.clientY - y) < 2) {
+      setLocSel(null);
+      setEventSelected(null);
+    }
   }
 
   const [timeX, setTimeX] = useQueryState('tpx', parseAsFloat.withDefault(0));
@@ -102,9 +105,17 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const numberLineRef = React.useRef(null);
   const timelineRef = React.useRef(null);
   const eventsRef = React.useRef<Array<HTMLDivElement | null>>([]);
+  const eventsPinRef = React.useRef<Array<HTMLDivElement | null>>([]);
+  const eventsPinDivRef = React.useRef<Array<HTMLDivElement | null>>([]);
   const [eventSelected, setEventSelected] = React.useState(null);
+  const [lastEventSelected, setLastEventSelected] = React.useState(null);
+  React.useEffect(() => {
+    setLastEventSelected(eventSelected || lastEventSelected);
+  }, [eventSelected])
   React.useEffect(() => {
     eventsRef.current = eventsRef.current.slice(0, events.length);
+    eventsPinRef.current = eventsPinRef.current.slice(0, events.length);
+    eventsPinDivRef.current = eventsPinRef.current.slice(0, events.length);
   }, [events]);
 
   const [parents, setParents] = React.useState([]);
@@ -234,7 +245,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
     if(event?.location) {
       if(isListedAsState(event.location)) {
         const locSel = getCurrentState(event.location) || oopsieDaisies(event.location);
-        return Number(locSel.x) + (Number(locSel.width) / 2);
+        return Number(locSel.x) + Number(locSel.xLabel) + (Number(locSel.width) / 2);
       } else if(isListedAsLoc(event.location)) {
         const locSel = getLocation(event.location);
         return latLonToX(Number(locSel.lat), Number(locSel.long));
@@ -249,7 +260,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
     if(event?.location) {
       if(isListedAsState(event.location)) {
         const locSel = getCurrentState(event.location) || oopsieDaisies(event.location);
-        return Number(locSel.y) + (Number(locSel.height) / 2);
+        return Number(locSel.y) + Number(locSel.yLabel) + (Number(locSel.height) / 2);
       } else if(isListedAsLoc(event.location)) {
         const locSel = getLocation(event.location);
         return latLonToY(Number(locSel.lat), Number(locSel.long));
@@ -270,10 +281,10 @@ export default function Home({ states, locations, events, onCompleted, onError }
       if(event?.location) {
         if(isListedAsState(event.location)) {
           const locSel = getCurrentState(event.location) || oopsieDaisies(event.location);
-          const statePosX = Number(locSel.x) + (Number(locSel.width) / 2)
+          const statePosX = Number(locSel.x) + Number(locSel.xLabel) + (Number(locSel.width) / 2)
           const newMapX = (width / 2) - (statePosX * mapScale);
           setMapX(newMapX);
-          const statePosY = Number(locSel.y) + (Number(locSel.height) / 2)
+          const statePosY = Number(locSel.y) + Number(locSel.yLabel) + (Number(locSel.height) / 2)
           const newMapY = ((height - 64) * borderY / 2) - (statePosY * mapScale);
           setMapY(newMapY);
           setMapScrolling(true);
@@ -299,16 +310,45 @@ export default function Home({ states, locations, events, onCompleted, onError }
     }
   }
 
+  const locationClick = (location) => {
+    if(isListedAsState(location)) {
+      const locSel = getCurrentState(location) || oopsieDaisies(location);
+      const statePosX = Number(locSel.x) + Number(locSel.xLabel) + (Number(locSel.width) / 2)
+      const newMapX = (width / 2) - (statePosX * mapScale);
+      setMapX(newMapX);
+      const statePosY = Number(locSel.y) + Number(locSel.yLabel) + (Number(locSel.height) / 2)
+      const newMapY = ((height - 64) * borderY / 2) - (statePosY * mapScale);
+      setMapY(newMapY);
+      setMapScrolling(true);
+      setLocSel(location);
+    } else if(isListedAsLoc(location)) {
+      const locSel = getLocation(location);
+      const locPosX = latLonToX(Number(locSel.lat), Number(locSel.long));
+      const newMapX = (width / 2) - (locPosX * mapScale);
+      setMapX(newMapX);
+      const locPosY = latLonToY(Number(locSel.lat), Number(locSel.long));
+      const newMapY = ((height - 64) * borderY / 2) - (locPosY * mapScale);
+      setMapY(newMapY);
+      setMapScrolling(true);
+      setLocSel(location);
+    } else {
+      setLocSel(null);
+    }
+  }
+
   const locHoverNear = (posX, posY) => {
     return Math.sqrt(Math.pow(Math.abs(posX - (mousePos.x - mapX) / mapScale), 2) + Math.pow(Math.abs(posY - (mousePos.y - mapY - 70) / mapScale), 2)) < (8 / mapScale);
   }
 
   const eventVisible = (event) => {
-    return Math.abs((((convertDateToDecimal(event.startDate) - startYear) * timeScale) + (timeScale * 0.4)) - (timeX + (width / 2))) < (width / 2 + 130);
+    return Math.abs((((convertDateToDecimal(event.startDate) - startYear) * timeScale) + (timeScale * 0.4) + 65) - (timeX + (width / 2))) < (width / 2 + 65);
   }
   const indexAtLoc = (event) => {
     const eventsVisible = events.filter(e => e !== null && e !== undefined && eventVisible(e) && e.location == event.location);
     return eventsVisible.indexOf(event);
+  }
+  const eventFromId = (eventId) => {
+    return events.find(e => e.id == eventId);
   }
   const eventsAtLocLen = (event) => {
     const eventsVisible = events.filter(e => e !== null && e !== undefined && eventVisible(e) && e.location == event.location);
@@ -332,7 +372,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
       {/* MAP */}
 
-      <section id={`map`} className={mapStyles.map} onWheelCapture={onMapScroll} style={{height:`${(height - 64) * borderY}px`}}>
+      <section id={`map`} className={mapStyles.map} onWheel={onMapScroll} style={{height:`${(height - 64) * borderY}px`}}>
         <svg width={'10rem'} height={'100%'} style={{background:`linear-gradient(90deg, rgba(0,0,0,0.8), transparent)`,zIndex:109}}></svg>
         <Image className={mapStyles.compass} src="/images/compass.png" height={256} width={256} alt="compass" style={{height:`${compassDimensions(height, borderY)}px`,width:`${compassDimensions(height, borderY)}px`,
             top:`calc(${((height - 64) * borderY)}px - ${compassDimensions(height, borderY)}px - 1.2rem)`}}/>
@@ -366,12 +406,12 @@ export default function Home({ states, locations, events, onCompleted, onError }
                 {(mapScale > 4) ? (
                   <HighTopLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${mapScale > 4 ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
                 ) : (
-                  (mapScale >= 1.3) && (
-                    <MediumTopLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 1.3 && mapScale <= 4) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+                  (mapScale >= 1.5) && (
+                    <MediumTopLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 1.5 && mapScale <= 4) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
                   )
                 )}
-                {(mapScale >= 2.5) && (
-                  <MediumTopRiverLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 2.5) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+                {(mapScale >= 3) && (
+                  <MediumTopRiverLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 3) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
                 )}
               </>
             )}
@@ -409,23 +449,106 @@ export default function Home({ states, locations, events, onCompleted, onError }
               </>
             ))}
 
-            {events.map((event, i) => (event?.location && getLocX(event) !== null && eventVisible(event)) && (
-              <MapSvg className={`${timelineStyles.eventsp} ${timelineStyles[event.category + 'p']} ${eventSelected == event.id && timelineStyles.selectedPin}`} width={40} height={30} style={{transformOrigin:`bottom center`,
-                  transform:`translate(${getLocX(event)}px, ${getLocY(event)}px) scale(${(0.9 / mapScale + 0.1) * (eventSelected == event.id ? 1.3 : 1)}) rotate(${(indexAtLoc(event) * 30)}deg)`}}
-                  name={'pin_copy'} onCompleted={onCompleted} onError={onError} onMouseDownCapture={mapMouseDown}
-                  onMouseUpCapture={(e) => {
-                    const {x, y} = tempMousePos.current;
-                    if (Math.abs(e.clientX - x) < 2 && Math.abs(e.clientY - y) < 2) {
-                      eventClick(event, ((convertDateToDecimal(event.startDate) - startYear) * timeScale) + (timeScale * 0.4),
-                          (categoryToIndex(event.category) * 65 * 2) + (isEvenIndexInCategory(event, events) ? 0 : 65) - ((height - ((height - 64) * borderY) - 200) / 2));
-                    }
-                  }
-                }
-              />
+            {events.map((event, i) => ((getLocX(event) != null && event.location != null && (eventVisible(event) || event.id == eventSelected)) &&
+              ((eventsAtLocLen(event) <= 1 || event.id == eventSelected) ? (
+                <MapSvg className={`${timelineStyles.eventsp} ${timelineStyles[event.category + 'p']} ${eventSelected == event.id && timelineStyles.selectedPin}`} width={40} height={30} style={{transformOrigin:`bottom center`,
+                    transform:`translate(${getLocX(event)}px, ${getLocY(event)}px) scale(${(0.9 / mapScale + 0.1) * (eventSelected == event.id ? 1.3 : 1)})`}}
+                    name={'pin'} onCompleted={onCompleted} onError={onError} onMouseDownCapture={mapMouseDown}
+                    onMouseUpCapture={(e) => {
+                      const {x, y} = tempMousePos.current;
+                      if (Math.abs(e.clientX - x) < 2 && Math.abs(e.clientY - y) < 2) {
+                        eventClick(event, ((convertDateToDecimal(event.startDate) - startYear) * timeScale) + (timeScale * 0.4),
+                            (categoryToIndex(event.category) * 65 * 2) + (isEvenIndexInCategory(event, events) ? 0 : 65) - ((height - ((height - 64) * borderY) - 200) / 2));
+                      }
+                    }}
+                />
+              ) : (
+                ((indexAtLoc(event) == 0) && (event.location != eventFromId(eventSelected)?.location)) && (
+                  <div className={`${timelineStyles.eventspMulti} ${locSel == event.location && timelineStyles.selectedPin}`} style={{transformOrigin:`bottom center`,
+                        transform:`translate(${getLocX(event)}px, ${getLocY(event)}px) scale(${(0.9 / mapScale + 0.1) * (locSel == event.location ? 1.3 : 1)})`}}>
+                    <MapSvg className={`${timelineStyles[event.category + 'p']}`} width={40} height={30}
+                        style={{top:-30,left:-20}}
+                        name={'pin_multi'} onCompleted={onCompleted} onError={onError} onMouseDownCapture={mapMouseDown}
+                        onMouseUpCapture={(e) => {
+                          const {x, y} = tempMousePos.current;
+                          if (Math.abs(e.clientX - x) < 2 && Math.abs(e.clientY - y) < 2) {
+                            locationClick(event.location);
+                          }
+                        }}
+                    />
+
+                    {/* LOCATION COUNT */}
+                    <div className={timelineStyles.eventspLabel} style={{}}>
+                      <h3>
+                        {eventsAtLocLen(event)}
+                      </h3>
+                    </div>
+
+                    {/* EVENT LIST AT LOC */}
+                    {(locSel == event.location && (
+                      <>
+                        <div className={timelineStyles.eventspListArrow} style={{transformOrigin:`center left`,transform:`translate(${0}px, -50%) scale(0.6)`}}></div>
+                        <div className={timelineStyles.eventspList} style={{width:`${Math.max(...eventsPinDivRef.current.map(el => el ? el.offsetWidth : 0))}px`,pointerEvents:'auto',height:`calc(${eventsAtLocLen(event) * 4}rem - 0.6rem)`,
+                            transformOrigin:`center left`,transform:`translate(${0}px, -50%) scale(0.6)`}}>
+                          {events.filter(e => e !== null && e !== undefined && eventVisible(e) && e.location == event.location).map((eInList, j) => (
+                            <>
+                              <div ref={el => eventsPinDivRef.current[j] = el} className={`${timelineStyles.events} ${timelineStyles.eventspListEvent} ${timelineStyles[eInList.category]}`} style={{transform:`translate(0px, ${indexAtLoc(eInList) * 4}rem)`,
+                                  width:`calc(${(eventsPinRef.current[j]?.offsetWidth < (130 + (eInList?.endDate && 70))) ? (129 + (eInList?.endDate && 70)) : (eventsPinRef.current[j]?.offsetWidth - 0.01)}px + 1rem)`}}
+                                  onMouseDownCapture={mapMouseDown}
+                                  onMouseUpCapture={(e) => {
+                                    const {x, y} = tempMousePos.current;
+                                    if (Math.abs(e.clientX - x) < 2 && Math.abs(e.clientY - y) < 2) {
+                                      eventClick(eInList, ((convertDateToDecimal(eInList.startDate) - startYear) * timeScale) + (timeScale * 0.4),
+                                        (categoryToIndex(eInList.category) * 65 * 2) + (isEvenIndexInCategory(eInList, events) ? 0 : 65) - ((height - ((height - 64) * borderY) - 200) / 2))
+                                    }
+                                  }}
+                              >
+                                <div className={timelineStyles.eventDiv} style={{overflow:'hidden',width:'100%',height:'100%'}}>
+                                  <h6 ref={el => eventsPinRef.current[j] = el} style={{marginTop:4}}>
+                                    {eInList.displayName}
+                                  </h6>
+                                  <div style={{position:'absolute',width:'100%',height:'1rem',top:'1rem',textAlign:'right'}}>
+                                    {eInList?.endDate && (
+                                      <p style={{position:'relative'}}>
+                                        {` – ${dateFilterRender(eInList.endDate, eInList.specEndDate)}`}
+                                      </p>
+                                    )}
+                                    <p style={{position:'relative',display:'inline-block'}} className={timelineStyles.startDate}>
+                                      {dateFilterRender(eInList.startDate, eInList.specStartDate)}
+                                    </p>
+                                  </div>
+                                  <FilterIcon className={timelineStyles.filterIcon} filter={eInList.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
+                                </div>
+                              </div>
+                            </>
+                          ))}
+                        </div>
+                      </>
+                    ))}
+                  </div>
+                )
+              ))
             ))}
 
           </div>
         </DraggableCore>
+
+        {/* INFO */}
+        {(lastEventSelected != null) && (
+          <div className={mapStyles.infoBox} style={{width:'25%',height:`${(height - 64) * borderY}px`,left:`calc(${width}px - 25%)`}}>
+            <div className={`${mapStyles.infoBoxDivBack}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}></div>
+            <div className={`${mapStyles.infoBoxDiv} ${utilStyles.scrollable}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}>
+              
+              <h1 className={`${timelineStyles[eventFromId(lastEventSelected).category + 'Text']}`}>
+                {eventFromId(lastEventSelected)?.fullName || eventFromId(lastEventSelected)?.displayName}
+              </h1>
+
+              <UrlToAbstract url={eventFromId(lastEventSelected).wikiLink} className={mapStyles.infoBoxInfo} />
+
+            </div>
+          </div>
+        )}
+
       </section>
       
       {/* DRAG BORDER */}
@@ -441,7 +564,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`${((timeScale - 50) * 100) / 200}% 100%`,width:`${0.25 * (height - ((height - 64) * borderY))}px`}}/>
       <section id={`timeline`} className={`${timelineStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
           style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}} onMouseEnter={() => setHoverTimeline(true)} onMouseLeave={() => setHoverTimeline(false)}>
-        <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}} onMouseUpCapture={() => !isDragging && eventClick(null)}>
+        <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}} onMouseUpCapture={() => {if(!isDragging) { eventClick(null); setLocSel(null); }}}>
           {events.map((event, i) => (
             <div style={{zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>
 
@@ -557,7 +680,6 @@ export default function Home({ states, locations, events, onCompleted, onError }
       </section>
 
       {/* MARKERS */}
-
       <div className={`${timelineStyles.markerYear}`}>
         <div style={{height:height - ((height - 64) * borderY),opacity:`${scrolling ? 1 : 0.5}`,transition:`opacity ${scrolling ? 0.1 : 1}s`,WebkitTransition:`opacity ${scrolling ? 0.1 : 1}s`,msTransition:`opacity ${scrolling ? 0.1 : 1}s`}}
             className={`${timelineStyles.markerLine}`}></div>
