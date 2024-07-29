@@ -505,14 +505,14 @@
     color: #dca7a7;
     background: linear-gradient(to right, rgba(131, 47, 47, 0.3) calc(0%), transparent 100%);
 }
-.workTab:hover {
+.rulingTab:hover {
     color: #853030;
     background-color: #dca7a7;
 }
-.workTab svg {
+.rulingTab svg {
     fill: #853030;
 }
-.workTab svg:hover {
+.rulingTab svg:hover {
     background-color: #853030;
     fill: #dca7a7;
 }
