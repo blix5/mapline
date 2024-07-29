@@ -2,7 +2,7 @@ import ReactDOM from "react-dom";
 import React, { useState, useEffect } from "react";
 
 const convertToApiUrl = (wikiUrl) => {
-  const title = wikiUrl.split('/').pop();
+  const title = decodeURIComponent(wikiUrl.split('/').pop());
   const encodedTitle = encodeURIComponent(title);
   return `https://en.wikipedia.org/w/api.php?action=query&origin=*&prop=extracts&format=json&exintro=&titles=${encodedTitle}`;
 };
@@ -37,8 +37,8 @@ export default function UrlToAbstract({ url, ...rest }) {
     getContents();
   }, [url]);
 
-  if (loading) return <p>Loading ...</p>;
-  if (error) return <p>An error occurred: {error.message}</p>;
+  if (loading) return <p {...rest}>...</p>;
+  if (error) return <p {...rest}>An error occurred: {error.message}</p>;
 
   return (
     <>

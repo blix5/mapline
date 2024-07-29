@@ -104,7 +104,10 @@ export async function getLocations() {
                 id: row[0] ?? null,
                 displayName: row[1] ?? 'undefined',
                 lat: row[2] ?? 0,
-                long: row[3] ?? 0
+                long: row[3] ?? 0,
+                foundDate: row[4] ?? null,
+                foundDateSpec: row[5] ?? 'day',
+                size: row[6] ?? 3,
             }));
         }
     } catch(err) {

@@ -30,7 +30,7 @@ import HoverVisibleDiv from '../libs/HoverVisibleDiv';
 
 import DecimalYearToDate from '../libs/dateDecimal';
 import categoryToIndex from '../libs/categoryIndex';
-import dateFilterRender from '../libs/dateFilterRender';
+import { dateFilterRender, convertDate } from '../libs/dateFilterRender';
 import UrlToAbstract from '../libs/wikipediaAbstract';
 
 import compassDimensions from '../libs/map/mapUtils';
@@ -337,7 +337,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
   }
 
   const locHoverNear = (posX, posY) => {
-    return Math.sqrt(Math.pow(Math.abs(posX - (mousePos.x - mapX) / mapScale), 2) + Math.pow(Math.abs(posY - (mousePos.y - mapY - 70) / mapScale), 2)) < (8 / mapScale);
+    return Math.sqrt(Math.pow(Math.abs(posX - (mousePos.x - mapX) / mapScale), 2) + Math.pow(Math.abs(posY - (mousePos.y - mapY - 70) / mapScale), 2)) < (10 / mapScale);
   }
 
   const eventVisible = (event) => {
@@ -440,10 +440,11 @@ export default function Home({ states, locations, events, onCompleted, onError }
               </>
             ))}
 
-            {locations.map((location, index) => (
+            {locations.map((location, index) => (convertDateToDecimal(location.foundDate) <= timeYear) &&
+                ((location.size == 5) || (location.size == 4 && mapScale > 0.4) || (location.size == 3 && mapScale > 1) || (location.size == 2 && mapScale > 1.7) || (location.size == 1 && mapScale > 2.5) || (locSel == location.id)) && (
               <>
-                <div style={{transformOrigin:`top left`,transform:`scale(${0.7 / mapScale + 0.1})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:115,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
-                  <div className={`${mapStyles.locationDot}`} style={{opacity:(locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) || locSel == location.id) ? 1 : 0.3}}></div>
+                <div style={{transformOrigin:`top left`,transform:`scale(${(location.size / 10 + 0.3) / mapScale + 0.1})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:115,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
+                  <div className={`${mapStyles.locationDot}`} style={{opacity:(locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) || locSel == location.id) ? 1 : (0.3 + (location.size / 10))}}></div>
                   <h3 className={`${mapStyles.locationLabel} ${(!locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) && locSel != location.id) && mapStyles.locationLabelHidden}`}>{location.displayName}</h3>
                 </div>
               </>
@@ -535,14 +536,19 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
         {/* INFO */}
         {(lastEventSelected != null) && (
-          <div className={mapStyles.infoBox} style={{width:'25%',height:`${(height - 64) * borderY}px`,left:`calc(${width}px - 25%)`}}>
+          <div className={mapStyles.infoBox} style={{width:`${(((height - 64) * borderY) + (width / 4)) / 2}px`,height:`${(height - 64) * borderY}px`,left:`calc(${width}px - ${(((height - 64) * borderY) + (width / 4)) / 2}px)`}}>
             <div className={`${mapStyles.infoBoxDivBack}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}></div>
             <div className={`${mapStyles.infoBoxDiv} ${utilStyles.scrollable}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}>
               
               <h1 className={`${timelineStyles[eventFromId(lastEventSelected).category + 'Text']}`}>
                 {eventFromId(lastEventSelected)?.fullName || eventFromId(lastEventSelected)?.displayName}
               </h1>
-
+              <h2>
+                {convertDate(String(dateFilterRender(eventFromId(lastEventSelected)?.startDate, eventFromId(lastEventSelected)?.specStartDate)))}
+                {eventFromId(lastEventSelected)?.endDate && 
+                  ` – ${convertDate(String(dateFilterRender(eventFromId(lastEventSelected)?.endDate, eventFromId(lastEventSelected)?.specEndDate)))}`
+                }
+              </h2>
               <UrlToAbstract url={eventFromId(lastEventSelected).wikiLink} className={mapStyles.infoBoxInfo} />
 
             </div>

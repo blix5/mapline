@@ -133,7 +133,7 @@
     z-index: 200;
 }
 .infoBoxDivBack {
-    background-color: rgba(0,0,0,0.5);
+    background-color: rgba(0,0,0,0.7);
     top: 1rem;
     left: 1rem;
     border-radius: 1rem;
@@ -143,8 +143,8 @@
     top: 1rem;
     left: 1rem;
     border-radius: 1rem;
-    overflow-y: scroll;
     overflow-x: hidden;
+    overflow-y: scroll;
 
     background-clip: text;
     -webkit-background-clip: text;
@@ -154,19 +154,36 @@
 .infoBoxDiv * {
     position: relative;
 }
+.infoBoxDiv::-webkit-scrollbar-track {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.infoBoxDiv::-webkit-scrollbar {
+    width: 0.8rem;
+}
 .infoBoxDiv h1 {
     font-weight: bolder;
     font-family: 'Baskerville', Georgia, Garamond, Times, 'Cambria', 'Times New Roman', serif;
     font-size: 1.7rem;
     line-height: 130%;
-    margin: 1rem 0rem 1rem 0rem;
+    margin: 1rem 0rem 0.5rem 0rem;
     padding: 0.4rem 0rem 0.4rem 1rem;
+}
+.infoBoxDiv h2 {
+    display: inline-block;
+    font-weight: bolder;
+    font-size: 0.9rem;
+    font-weight: 100;
+    font-style: italic;
+    color: white;
+    line-height: 150%;
+    margin: 0rem 1rem 0rem 1rem;
 }
 .infoBoxInfo {
     font-family: 'Times New Roman', Times, Georgia, Garamond, serif;
     color: white;
     font-weight: 100;
     line-height: 120%;
-    font-size: 0.9rem;
-    margin: 1rem 1rem 2rem 1rem;
+    font-size: 0.8rem;
+    margin: -0.3rem 0.5rem 2rem 1rem;
 }
