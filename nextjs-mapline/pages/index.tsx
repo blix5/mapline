@@ -94,7 +94,6 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const [timeY, setTimeY] = useQueryState('tpy', parseAsFloat.withDefault(0));
   const [timeScale, setTimeScale] = useQueryState('tps', parseAsFloat.withDefault(100));
   const [timeYear, setTimeYear] = useQueryState('year', parseAsFloat.withDefault(1492));
-  const [hoverTimeline, setHoverTimeline] = React.useState(false);
 
   const mapLimX = 2400;
   const mapLimY = 1280;
@@ -108,10 +107,16 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const eventsPinRef = React.useRef<Array<HTMLDivElement | null>>([]);
   const eventsPinDivRef = React.useRef<Array<HTMLDivElement | null>>([]);
   const [eventSelected, setEventSelected] = React.useState(null);
-  const [lastEventSelected, setLastEventSelected] = React.useState(null);
+  const [eventsOpen, setEventsOpen] = React.useState([]);
+  const [eventOpenSelected, setEventOpenSelected] = React.useState(null);
   React.useEffect(() => {
-    setLastEventSelected(eventSelected || lastEventSelected);
-  }, [eventSelected])
+    if (eventSelected !== null) {
+      if(!eventsOpen.includes(eventSelected)) {
+        setEventsOpen(prevEvents => [...prevEvents, eventSelected]);
+      }
+      setEventOpenSelected(eventSelected);
+    }
+  }, [eventSelected, eventsOpen]);
   React.useEffect(() => {
     eventsRef.current = eventsRef.current.slice(0, events.length);
     eventsPinRef.current = eventsPinRef.current.slice(0, events.length);
@@ -535,28 +540,50 @@ export default function Home({ states, locations, events, onCompleted, onError }
         </DraggableCore>
 
         {/* INFO */}
-        {(lastEventSelected != null) && (
+        {(eventOpenSelected != null) && (
           <div className={mapStyles.infoBox} style={{width:`${(((height - 64) * borderY) + (width / 4)) / 2}px`,height:`${(height - 64) * borderY}px`,left:`calc(${width}px - ${(((height - 64) * borderY) + (width / 4)) / 2}px)`}}>
             <div className={`${mapStyles.infoBoxDivBack}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}></div>
-            <div className={`${mapStyles.infoBoxDiv} ${utilStyles.scrollable}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}>
-              
-              <h1 className={`${timelineStyles[eventFromId(lastEventSelected).category + 'Text']}`}>
-                {eventFromId(lastEventSelected)?.fullName || eventFromId(lastEventSelected)?.displayName}
-              </h1>
-              <h2>
-                {convertDate(String(dateFilterRender(eventFromId(lastEventSelected)?.startDate, eventFromId(lastEventSelected)?.specStartDate)))}
-                {eventFromId(lastEventSelected)?.endDate && 
-                  ` – ${convertDate(String(dateFilterRender(eventFromId(lastEventSelected)?.endDate, eventFromId(lastEventSelected)?.specEndDate)))}`
-                }
-              </h2>
-              <UrlToAbstract url={eventFromId(lastEventSelected).wikiLink} className={mapStyles.infoBoxInfo} />
+            <div className={`${mapStyles.infoBoxDiv}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}>
+
+              <div className={`${mapStyles.infoBoxTabs}`}>
+                {eventsOpen.map((eOpen, i) => (
+                  <div className={`${mapStyles.infoBoxTab} ${timelineStyles[eventFromId(eOpen).category + 'Tab']} ${eventOpenSelected == eOpen && mapStyles.infoBoxTabSel}`} onClick={() => setEventOpenSelected(eOpen)}>
+                    <p>
+                      {eventFromId(eOpen).displayName}
+                    </p>
+                    <MapSvg name={'close'} onCompleted={onCompleted} onError={onError} width={'1rem'} height={'1rem'} className={`${mapStyles.infoBoxClose}`} onClick={(e) => {
+                      e.stopPropagation();
+                      if(eventSelected == eOpen) {
+                        setEventSelected(null);
+                        setLocSel(null);
+                      }
+                      const index = eventsOpen.indexOf(eOpen);
+                      setEventsOpen(prevEvents => prevEvents.filter(event => event != eOpen));
+                      setEventOpenSelected(eventsOpen[index - 1]);
+                    }}/>
+                  </div>
+                ))}
+              </div>
+
+              <div className={`${mapStyles.infoBoxDivInner} ${utilStyles.scrollable}`}>
+                <h1 className={`${timelineStyles[eventFromId(eventOpenSelected).category + 'Text']}`}>
+                  {eventFromId(eventOpenSelected)?.fullName || eventFromId(eventOpenSelected)?.displayName}
+                </h1>
+                <h2>
+                  {convertDate(String(dateFilterRender(eventFromId(eventOpenSelected)?.startDate, eventFromId(eventOpenSelected)?.specStartDate)))}
+                  {eventFromId(eventOpenSelected)?.endDate && 
+                    ` – ${convertDate(String(dateFilterRender(eventFromId(eventOpenSelected)?.endDate, eventFromId(eventOpenSelected)?.specEndDate)))}`
+                  }
+                </h2>
+                <UrlToAbstract url={eventFromId(eventOpenSelected).wikiLink} className={mapStyles.infoBoxInfo} />
+              </div>
 
             </div>
           </div>
         )}
 
       </section>
-      
+
       {/* DRAG BORDER */}
       <div style={{position:"absolute",top:"3.75rem",zIndex:150,width:"100%"}}>
         <DraggableCore onDrag={(e, data) => {setBorderY(((data.y - 5) < ((height - 64) * 0.25)) ? 0.25 :
@@ -569,7 +596,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
       <input type='range' value={timeScale} min={50} max={250} onChange={(e) => onTimelineZoom(Number(e.target.value))} className={timelineStyles.timeScale}
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`${((timeScale - 50) * 100) / 200}% 100%`,width:`${0.25 * (height - ((height - 64) * borderY))}px`}}/>
       <section id={`timeline`} className={`${timelineStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
-          style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}} onMouseEnter={() => setHoverTimeline(true)} onMouseLeave={() => setHoverTimeline(false)}>
+          style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}}>
         <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}} onMouseUpCapture={() => {if(!isDragging) { eventClick(null); setLocSel(null); }}}>
           {events.map((event, i) => (
             <div style={{zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>

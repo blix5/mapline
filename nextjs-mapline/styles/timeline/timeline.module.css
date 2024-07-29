@@ -369,6 +369,17 @@
     color: #f7ebb3;
     background: linear-gradient(to right, rgba(163, 139, 49, 0.3) calc(0%), transparent 100%);
 }
+.eventTab:hover {
+    color: #A38B31;
+    background-color: #f7ebb3;
+}
+.eventTab svg {
+    fill: #A38B31;
+}
+.eventTab svg:hover {
+    background-color: #A38B31;
+    fill: #f7ebb3;
+}
 
 .legislation {
     background-color: #98de8e;
@@ -391,6 +402,17 @@
 .legislationText {
     color: #bae9b1;
     background: linear-gradient(to right, rgba(62, 123, 46, 0.3) calc(0%), transparent 100%);
+}
+.legislationTab:hover {
+    color: #3E7B2E;
+    background-color: #bae9b1;
+}
+.legislationTab svg {
+    fill: #3E7B2E;
+}
+.legislationTab svg:hover {
+    background-color: #3E7B2E;
+    fill: #bae9b1;
 }
 
 .foreign {
@@ -415,6 +437,17 @@
     color: #dcb8e4;
     background: linear-gradient(to right, rgba(118, 51, 125, 0.3) calc(0%), transparent 100%);
 }
+.foreignTab:hover {
+    color: #75337c;
+    background-color: #dcb8e4;
+}
+.foreignTab svg {
+    fill: #75337c;
+}
+.foreignTab svg:hover {
+    background-color: #75337c;
+    fill: #dcb8e4;
+}
 
 .work {
     background-color: #72c2c5;
@@ -438,6 +471,17 @@
     color: #9fd7d9;
     background: linear-gradient(to right, rgba(66, 98, 99, 0.3) calc(0%), transparent 100%);
 }
+.workTab:hover {
+    color: #426263;
+    background-color: #9fd7d9;
+}
+.workTab svg {
+    fill: #426263;
+}
+.workTab svg:hover {
+    background-color: #426263;
+    fill: #9fd7d9;
+}
 
 .ruling {
     background-color: #d28b8b;
@@ -460,6 +504,17 @@
 .rulingText {
     color: #dca7a7;
     background: linear-gradient(to right, rgba(131, 47, 47, 0.3) calc(0%), transparent 100%);
+}
+.workTab:hover {
+    color: #853030;
+    background-color: #dca7a7;
+}
+.workTab svg {
+    fill: #853030;
+}
+.workTab svg:hover {
+    background-color: #853030;
+    fill: #dca7a7;
 }
 
 .selectedEvent {
