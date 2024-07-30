@@ -116,7 +116,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
       }
       setEventOpenSelected(eventSelected);
     }
-  }, [eventSelected, eventsOpen]);
+  }, [eventSelected]);
   React.useEffect(() => {
     eventsRef.current = eventsRef.current.slice(0, events.length);
     eventsPinRef.current = eventsPinRef.current.slice(0, events.length);
@@ -586,6 +586,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
       </section>
       
+      {eventsOpen}_=_=_{eventOpenSelected}
       {/* DRAG BORDER */}
       <div style={{position:"absolute",top:"3.75rem",zIndex:150,width:"100%"}}>
         <DraggableCore onDrag={(e, data) => {setBorderY(((data.y - 5) < ((height - 64) * 0.25)) ? 0.25 :
