@@ -15,6 +15,7 @@ import Layout, { siteTitle } from '../components/layout';
 import utilStyles from '../styles/utils.module.css';
 import indexStyles from '../styles/index.module.css';
 import mapStyles from '../styles/map/map.module.css';
+import infoStyles from '../styles/map/info.module.css';
 import stateStyles from '../styles/map/states.module.css';
 import timelineStyles from '../styles/timeline/timeline.module.css';
 
@@ -237,7 +238,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
     setTimeScale(value);
 
-    const newX =( xTime * value) - (width / 2);
+    const newX = (xTime * value) - (width / 2);
 
     numberLineRef.current.scrollLeft = newX;
     timelineRef.current.scrollLeft = newX;
@@ -510,7 +511,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
                                   }}
                               >
                                 <div className={timelineStyles.eventDiv} style={{overflow:'hidden',width:'100%',height:'100%'}}>
-                                  <h6 ref={el => eventsPinRef.current[j] = el} style={{marginTop:4}}>
+                                  <h6 ref={el => eventsPinRef.current[j] = el} style={{marginTop:4,fontStyle:`${eInList.italics ? 'italic' : 'normal'}`}}>
                                     {eInList.displayName}
                                   </h6>
                                   <div style={{position:'absolute',width:'100%',height:'1rem',top:'1rem',textAlign:'right'}}>
@@ -541,17 +542,17 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
         {/* INFO */}
         {(eventOpenSelected != null) && (
-          <div className={mapStyles.infoBox} style={{width:`${(((height - 64) * borderY) + (width / 4)) / 2}px`,height:`${(height - 64) * borderY}px`,left:`calc(${width}px - ${(((height - 64) * borderY) + (width / 4)) / 2}px)`}}>
-            <div className={`${mapStyles.infoBoxDivBack}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}></div>
-            <div className={`${mapStyles.infoBoxDiv}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}>
+          <div className={infoStyles.infoBox} style={{width:`${(((height - 64) * borderY) + (width / 4)) / 2}px`,height:`${(height - 64) * borderY}px`,left:`calc(${width}px - ${(((height - 64) * borderY) + (width / 4)) / 2}px)`}}>
+            <div className={`${infoStyles.infoBoxDivBack}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}></div>
+            <div className={`${infoStyles.infoBoxDiv}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}>
 
-              <div className={`${mapStyles.infoBoxTabs}`}>
+              <div className={`${infoStyles.infoBoxTabs}`}>
                 {eventsOpen.map((eOpen, i) => (
-                  <div className={`${mapStyles.infoBoxTab} ${timelineStyles[eventFromId(eOpen).category + 'Tab']} ${eventOpenSelected == eOpen && mapStyles.infoBoxTabSel}`} onClick={() => setEventOpenSelected(eOpen)}>
-                    <p>
+                  <div className={`${infoStyles.infoBoxTab} ${timelineStyles[eventFromId(eOpen).category + 'Tab']} ${eventOpenSelected == eOpen && infoStyles.infoBoxTabSel}`} onClick={() => setEventOpenSelected(eOpen)}>
+                    <p style={{fontStyle:`${eventFromId(eOpen).italics ? 'italic' : 'normal'}`}}>
                       {eventFromId(eOpen).displayName}
                     </p>
-                    <MapSvg name={'close'} onCompleted={onCompleted} onError={onError} width={'1rem'} height={'1rem'} className={`${mapStyles.infoBoxClose}`} onClick={(e) => {
+                    <MapSvg name={'close'} onCompleted={onCompleted} onError={onError} width={'1rem'} height={'1rem'} className={`${infoStyles.infoBoxClose}`} onClick={(e) => {
                       e.stopPropagation();
                       const index = eventsOpen.indexOf(eOpen);
                       if(eOpen == eventOpenSelected) {
@@ -567,17 +568,24 @@ export default function Home({ states, locations, events, onCompleted, onError }
                 ))}
               </div>
 
-              <div className={`${mapStyles.infoBoxDivInner} ${utilStyles.scrollable}`}>
-                <h1 className={`${timelineStyles[eventFromId(eventOpenSelected).category + 'Text']}`}>
+              <div className={`${infoStyles.infoBoxDivInner} ${utilStyles.scrollable}`}>
+                <h1 className={`${timelineStyles[eventFromId(eventOpenSelected).category + 'Text']}`} style={{fontStyle:`${eventFromId(eventOpenSelected).italics ? 'italic' : 'normal'}`}}>
                   {eventFromId(eventOpenSelected)?.fullName || eventFromId(eventOpenSelected)?.displayName}
+                  {(eventFromId(eventOpenSelected)?.aka) && (
+                    <h3>
+                      A.K.A. {eventFromId(eventOpenSelected).aka}
+                    </h3>
+                  )}
                 </h1>
+                
                 <h2>
                   {convertDate(String(dateFilterRender(eventFromId(eventOpenSelected)?.startDate, eventFromId(eventOpenSelected)?.specStartDate)))}
                   {eventFromId(eventOpenSelected)?.endDate && 
                     ` – ${convertDate(String(dateFilterRender(eventFromId(eventOpenSelected)?.endDate, eventFromId(eventOpenSelected)?.specEndDate)))}`
                   }
                 </h2>
-                <UrlToAbstract url={eventFromId(eventOpenSelected).wikiLink} className={mapStyles.infoBoxInfo} />
+                <UrlToAbstract url={eventFromId(eventOpenSelected).wikiLink} className={infoStyles.infoBoxInfo} />
+                <a target='_blank' href={eventFromId(eventOpenSelected).wikiLink}>Wikipedia</a>
               </div>
 
             </div>
@@ -595,8 +603,8 @@ export default function Home({ states, locations, events, onCompleted, onError }
       </div>
       
       {/* TIMELINE */}
-      <input type='range' value={timeScale} min={50} max={250} onChange={(e) => onTimelineZoom(Number(e.target.value))} className={timelineStyles.timeScale}
-          style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`${((timeScale - 50) * 100) / 200}% 100%`,width:`${0.25 * (height - ((height - 64) * borderY))}px`}}/>
+      <input type='range' value={timeScale} min={30} max={350} onChange={(e) => onTimelineZoom(Number(e.target.value))} className={timelineStyles.timeScale}
+          style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`${((timeScale - 30) * 100) / 320}% 100%`,width:`${0.25 * (height - ((height - 64) * borderY))}px`}}/>
       <section id={`timeline`} className={`${timelineStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
           style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}}>
         <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}} onMouseUpCapture={() => {if(!isDragging) { eventClick(null); setLocSel(null); }}}>
@@ -611,7 +619,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
                     style={{marginTop:`${event?.parent ? (isParentSelected(event.parent) ? 0 : -0.5) : 0}rem`}}
                     className={`${timelineStyles.events} ${timelineStyles[event.category]} ${event?.parent && timelineStyles.childEvent} ${event.id == eventSelected && timelineStyles.selectedEvent}`}>
                 <div style={{overflow:'hidden',height:'2rem'}}>
-                  <h6 ref={el => eventsRef.current[i] = el}>
+                  <h6 ref={el => eventsRef.current[i] = el} style={{fontStyle:`${event.italics ? 'italic' : 'normal'}`}}>
                     {event.displayName}
                   </h6>
                   <div style={{width:`calc(100% - ${isListedAsParent(event.id) ? 1 : 0}rem)`,height:'2rem',overflow:'hidden',right:`${isListedAsParent(event.id) ? 1 : 0}rem`,position:'absolute'}}>
