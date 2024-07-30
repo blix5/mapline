@@ -208,6 +208,7 @@
     overflow: hidden;
     white-space: nowrap;
     padding: 0.2rem 0.2rem 0.2rem 0.4rem;
+    border-bottom: 0.1rem solid rgba(255,255,255,0.5);
 
     -webkit-user-select: none;
     -ms-user-select: none;

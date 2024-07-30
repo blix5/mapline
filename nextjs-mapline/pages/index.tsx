@@ -553,13 +553,15 @@ export default function Home({ states, locations, events, onCompleted, onError }
                     </p>
                     <MapSvg name={'close'} onCompleted={onCompleted} onError={onError} width={'1rem'} height={'1rem'} className={`${mapStyles.infoBoxClose}`} onClick={(e) => {
                       e.stopPropagation();
-                      if(eventSelected == eOpen) {
+                      const index = eventsOpen.indexOf(eOpen);
+                      if(eOpen == eventOpenSelected) {
+                        setEventOpenSelected(eventsOpen[index + 1] || eventsOpen[index - 1]);
+                      }
+                      if(eOpen == eventSelected) {
                         setEventSelected(null);
                         setLocSel(null);
                       }
-                      const index = eventsOpen.indexOf(eOpen);
                       setEventsOpen(prevEvents => prevEvents.filter(event => event != eOpen));
-                      setEventOpenSelected(eventsOpen[index - 1]);
                     }}/>
                   </div>
                 ))}
@@ -583,7 +585,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
         )}
 
       </section>
-
+      
       {/* DRAG BORDER */}
       <div style={{position:"absolute",top:"3.75rem",zIndex:150,width:"100%"}}>
         <DraggableCore onDrag={(e, data) => {setBorderY(((data.y - 5) < ((height - 64) * 0.25)) ? 0.25 :
