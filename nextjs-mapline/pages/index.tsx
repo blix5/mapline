@@ -7,6 +7,7 @@ import Draggable, {DraggableCore} from 'react-draggable';
 import { parseAsFloat, useQueryState } from 'next-usequerystate';
 import styled from 'styled-components';
 import { Link, Button, Element, Events, animateScroll as scroll, scrollSpy } from 'react-scroll';
+import Fuse from 'fuse.js';
 
 import Date from '../components/date';
 import useWindowDimensions from '../components/useWindowDimensions';
@@ -107,9 +108,45 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const eventsRef = React.useRef<Array<HTMLDivElement | null>>([]);
   const eventsPinRef = React.useRef<Array<HTMLDivElement | null>>([]);
   const eventsPinDivRef = React.useRef<Array<HTMLDivElement | null>>([]);
+
+  const [refsUpdated, setRefsUpdated] = React.useState(false);
+
   const [eventSelected, setEventSelected] = React.useState(null);
   const [eventsOpen, setEventsOpen] = React.useState([]);
   const [eventOpenSelected, setEventOpenSelected] = React.useState(null);
+
+  const [searchMatches, setSearchMatches] = React.useState([]);
+  const options = {
+    keys: ['displayName'],
+    threshold: 0.5,
+  };
+  const initializeFuse = (events) => {
+    return new Fuse(events, options);
+  };
+  const [fuse, setFuse] = React.useState(null);
+  React.useEffect(() => {
+    if (events.length > 0) {
+      setFuse(initializeFuse(events));
+    }
+  }, [events]);
+  const handleSearch = (e) => {
+    const search = e.target.value.trim().toLowerCase();
+    if (search && fuse) {
+      const results = fuse.search(search);
+      setSearchMatches(results.map(result => result.item).slice(0, 10));
+    } else {
+      setSearchMatches([]);
+    }
+  };
+  const searchEnter = (e) => {
+    if(e.key == 'Enter') {
+      if(searchMatches != null && searchMatches != undefined && searchMatches.length > 0) {
+        const topMatch = searchMatches[0];
+        eventClick(topMatch, ((convertDateToDecimal(topMatch.startDate) - startYear) * timeScale) + (timeScale * 0.4),
+            (categoryToIndex(topMatch.category) * 65 * 2) + (isEvenIndexInCategory(topMatch, events) ? 0 : 65) - ((height - ((height - 64) * borderY) - 200) / 2));
+      }
+    }
+  }
   React.useEffect(() => {
     if (eventSelected !== null) {
       if(!eventsOpen.includes(eventSelected)) {
@@ -118,11 +155,38 @@ export default function Home({ states, locations, events, onCompleted, onError }
       setEventOpenSelected(eventSelected);
     }
   }, [eventSelected]);
+
   React.useEffect(() => {
     eventsRef.current = eventsRef.current.slice(0, events.length);
+  }, [events.length]);
+
+  React.useEffect(() => {
     eventsPinRef.current = eventsPinRef.current.slice(0, events.length);
-    eventsPinDivRef.current = eventsPinRef.current.slice(0, events.length);
-  }, [events]);
+    eventsPinDivRef.current = eventsPinDivRef.current.slice(0, events.length);
+  }, [events.length])
+  const useMeasure = (searchMatches) => {
+    const searchResultsRef = React.useRef([]);
+    const [widths, setWidths] = React.useState([]);
+  
+    React.useEffect(() => {
+      const newWidths = searchResultsRef.current.map(el => el ? el.offsetWidth : 0);
+      setWidths(newWidths);
+    }, [searchMatches]);
+  
+    return { searchResultsRef, widths };
+  };
+  const { searchResultsRef, widths } = useMeasure(searchMatches);
+
+  React.useEffect(() => {
+    if (refsUpdated) {
+      setRefsUpdated(false);
+    }
+  }, [refsUpdated]);
+
+  const setRef = (refArray, el, i) => {
+    refArray.current[i] = el;
+    setRefsUpdated(true);
+  };
 
   const [parents, setParents] = React.useState([]);
   const [locSel, setLocSel] = React.useState(null);
@@ -456,7 +520,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
               </>
             ))}
 
-            {events.map((event, i) => ((getLocX(event) != null && event.location != null && (eventVisible(event) || event.id == eventSelected)) &&
+            {events.map((event, i) => ((getLocX(event) != null && event.location != null && (eventVisible(event) || event.id == eventSelected || eventsOpen.find(e => e == event.id) != null)) &&
               ((eventsAtLocLen(event) <= 1 || event.id == eventSelected) ? (
                 <MapSvg className={`${timelineStyles.eventsp} ${timelineStyles[event.category + 'p']} ${eventSelected == event.id && timelineStyles.selectedPin}`} width={40} height={30} style={{transformOrigin:`bottom center`,
                     transform:`translate(${getLocX(event)}px, ${getLocY(event)}px) scale(${(0.9 / mapScale + 0.1) * (eventSelected == event.id ? 1.3 : 1)})`}}
@@ -499,7 +563,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
                             transformOrigin:`center left`,transform:`translate(${0}px, -50%) scale(0.6)`}}>
                           {events.filter(e => e !== null && e !== undefined && eventVisible(e) && e.location == event.location).map((eInList, j) => (
                             <>
-                              <div ref={el => eventsPinDivRef.current[j] = el} className={`${timelineStyles.events} ${timelineStyles.eventspListEvent} ${timelineStyles[eInList.category]}`} style={{transform:`translate(0px, ${indexAtLoc(eInList) * 4}rem)`,
+                              <div ref={el => setRef(eventsPinDivRef, el, j)} className={`${timelineStyles.events} ${timelineStyles.eventspListEvent} ${timelineStyles[eInList.category]}`} style={{transform:`translate(0px, ${indexAtLoc(eInList) * 4}rem)`,
                                   width:`calc(${(eventsPinRef.current[j]?.offsetWidth < (130 + (eInList?.endDate && 70))) ? (129 + (eInList?.endDate && 70)) : (eventsPinRef.current[j]?.offsetWidth - 0.01)}px + 1rem)`}}
                                   onMouseDownCapture={mapMouseDown}
                                   onMouseUpCapture={(e) => {
@@ -511,7 +575,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
                                   }}
                               >
                                 <div className={timelineStyles.eventDiv} style={{overflow:'hidden',width:'100%',height:'100%'}}>
-                                  <h6 ref={el => eventsPinRef.current[j] = el} style={{marginTop:4,fontStyle:`${eInList.italics ? 'italic' : 'normal'}`}}>
+                                  <h6 ref={el => setRef(eventsPinRef, el, j)} style={{marginTop:4,fontStyle:`${eInList.italics ? 'italic' : 'normal'}`}}>
                                     {eInList.displayName}
                                   </h6>
                                   <div style={{position:'absolute',width:'100%',height:'1rem',top:'1rem',textAlign:'right'}}>
@@ -578,12 +642,21 @@ export default function Home({ states, locations, events, onCompleted, onError }
                   )}
                 </h1>
                 
-                <h2>
+                <h2 className={`${timelineStyles[eventFromId(eventOpenSelected).category + 'Text']}`} onClick={() => eventClick(eventFromId(eventOpenSelected), ((convertDateToDecimal(eventFromId(eventOpenSelected).startDate) - startYear) * timeScale) + (timeScale * 0.4),
+                      (categoryToIndex(eventFromId(eventOpenSelected).category) * 65 * 2) + (isEvenIndexInCategory(eventFromId(eventOpenSelected), events) ? 0 : 65) - ((height - ((height - 64) * borderY) - 200) / 2))}>
                   {convertDate(String(dateFilterRender(eventFromId(eventOpenSelected)?.startDate, eventFromId(eventOpenSelected)?.specStartDate)))}
                   {eventFromId(eventOpenSelected)?.endDate && 
                     ` – ${convertDate(String(dateFilterRender(eventFromId(eventOpenSelected)?.endDate, eventFromId(eventOpenSelected)?.specEndDate)))}`
                   }
                 </h2>
+                {(eventFromId(eventOpenSelected)?.location) && (
+                  <h4 onClick={() => locationClick(eventFromId(eventOpenSelected).location)}>
+                    {isListedAsLoc(eventFromId(eventOpenSelected).location) && getLocation(eventFromId(eventOpenSelected).location)?.displayName}
+                    {isListedAsState(eventFromId(eventOpenSelected).location) && getCurrentState(eventFromId(eventOpenSelected).location)?.displayName}
+                    <MapSvg width={11} name={'pin'} onCompleted={onCompleted} onError={onError}/>
+                  </h4>
+                )}
+
                 <UrlToAbstract url={eventFromId(eventOpenSelected).wikiLink} className={infoStyles.infoBoxInfo} />
                 <a target='_blank' href={eventFromId(eventOpenSelected).wikiLink}>Wikipedia</a>
               </div>
@@ -594,6 +667,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
       </section>
       
+      {}
       {/* DRAG BORDER */}
       <div style={{position:"absolute",top:"3.75rem",zIndex:150,width:"100%"}}>
         <DraggableCore onDrag={(e, data) => {setBorderY(((data.y - 5) < ((height - 64) * 0.25)) ? 0.25 :
@@ -605,6 +679,43 @@ export default function Home({ states, locations, events, onCompleted, onError }
       {/* TIMELINE */}
       <input type='range' value={timeScale} min={30} max={350} onChange={(e) => onTimelineZoom(Number(e.target.value))} className={timelineStyles.timeScale}
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`${((timeScale - 30) * 100) / 320}% 100%`,width:`${0.25 * (height - ((height - 64) * borderY))}px`}}/>
+      <input type='text' placeholder='Search... &#x1F50D;' onChange={handleSearch} onKeyDown={searchEnter}
+          style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,left:`calc(${width}px - 11.5rem)`}} className={timelineStyles.search}/>
+      {(searchMatches != null && searchMatches != undefined && searchMatches.length > 0) && (
+        <div className={timelineStyles.searchResults} style={{width:`15.7rem`,pointerEvents:'auto',height:`calc(${searchMatches.length * 4}rem - 0.6rem)`,
+            transformOrigin:`top left`,transform:`scale(0.6)`,left:`calc(${width}px - 11.5rem)`}}>
+          {searchMatches.map((eInList, j) => (
+            <div className={`${timelineStyles.events} ${timelineStyles.eventspListEvent} ${timelineStyles[eInList.category]}`} style={{transform:`translate(0px, ${j * 4}rem)`,
+                width:`calc(${(searchResultsRef.current[j]?.offsetWidth < (130 + (eInList?.endDate && 70))) ? (129 + (eInList?.endDate && 70)) : (searchResultsRef.current[j]?.offsetWidth - 0.01)}px + 1rem)`}}
+                onMouseDownCapture={mapMouseDown}
+                onMouseUpCapture={(e) => {
+                  const {x, y} = tempMousePos.current;
+                  if (Math.abs(e.clientX - x) < 2 && Math.abs(e.clientY - y) < 2) {
+                    eventClick(eInList, ((convertDateToDecimal(eInList.startDate) - startYear) * timeScale) + (timeScale * 0.4),
+                      (categoryToIndex(eInList.category) * 65 * 2) + (isEvenIndexInCategory(eInList, events) ? 0 : 65) - ((height - ((height - 64) * borderY) - 200) / 2))
+                  }
+                }}
+            >
+              <div className={timelineStyles.eventDiv} style={{overflow:'hidden',width:'100%',height:'100%'}}>
+                <h6 ref={el => searchResultsRef.current[j] = el} style={{marginTop:4,fontStyle:`${eInList.italics ? 'italic' : 'normal'}`}}>
+                  {eInList.displayName}
+                </h6>
+                <div style={{position:'absolute',width:'100%',height:'1rem',top:'1rem',textAlign:'right'}}>
+                  {eInList?.endDate && (
+                    <p style={{position:'relative'}}>
+                      {` – ${dateFilterRender(eInList.endDate, eInList.specEndDate)}`}
+                    </p>
+                  )}
+                  <p style={{position:'relative',display:'inline-block'}} className={timelineStyles.startDate}>
+                    {dateFilterRender(eInList.startDate, eInList.specStartDate)}
+                  </p>
+                </div>
+                <FilterIcon className={timelineStyles.filterIcon} filter={eInList.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       <section id={`timeline`} className={`${timelineStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
           style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,width:'100%',position:'absolute'}}>
         <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`}} onMouseUpCapture={() => {if(!isDragging) { eventClick(null); setLocSel(null); }}}>
@@ -619,7 +730,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
                     style={{marginTop:`${event?.parent ? (isParentSelected(event.parent) ? 0 : -0.5) : 0}rem`}}
                     className={`${timelineStyles.events} ${timelineStyles[event.category]} ${event?.parent && timelineStyles.childEvent} ${event.id == eventSelected && timelineStyles.selectedEvent}`}>
                 <div style={{overflow:'hidden',height:'2rem'}}>
-                  <h6 ref={el => eventsRef.current[i] = el} style={{fontStyle:`${event.italics ? 'italic' : 'normal'}`}}>
+                  <h6 ref={el => setRef(eventsRef, el, i)} style={{fontStyle:`${event.italics ? 'italic' : 'normal'}`}}>
                     {event.displayName}
                   </h6>
                   <div style={{width:`calc(100% - ${isListedAsParent(event.id) ? 1 : 0}rem)`,height:'2rem',overflow:'hidden',right:`${isListedAsParent(event.id) ? 1 : 0}rem`,position:'absolute'}}>

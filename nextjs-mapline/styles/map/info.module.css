@@ -47,19 +47,45 @@
 .infoBoxDiv h2 {
     display: inline-block;
     font-size: 0.9rem;
-    font-style: italic;
-    color: white;
+    font-weight: 100;
     line-height: 150%;
     margin: 0rem 1rem 0rem 1rem;
+    background: none;
+}
+.infoBoxDiv h2:hover {
+    cursor: pointer;
+    color: white;
 }
 .infoBoxDiv h3 {
     font-family: 'Futura', 'Avenir', 'Century Gothic', 'Gill Sans', 'Avant Garde Gothic', 'Helvetica Neue', 'Proxima Nova', 'Lato', Helvetica, Arial, sans-serif;
     font-style: italic;
+    font-weight: 100;
     opacity: 0.8;
     font-size: 0.8rem;
     color: white;
     line-height: 120%;
     margin: 0.5rem 0 0.3rem 0;
+}
+.infoBoxDiv h4 {
+    font-size: 0.7rem;
+    font-style: italic;
+    font-weight: 100;
+    color: gray;
+    line-height: 150%;
+    margin: 0.2rem 1rem 0rem 1rem;
+}
+.infoBoxDiv h4 svg {
+    display: inline;
+    margin-left: 0.3rem;
+    margin-bottom: -0.1rem;
+    fill: gray;
+}
+.infoBoxDiv h4:hover svg {
+    fill: white;
+}
+.infoBoxDiv h4:hover {
+    color: white;
+    cursor: pointer;
 }
 .infoBoxInfo {
     font-family: 'Times New Roman', Times, Georgia, Garamond, serif;
@@ -72,6 +98,7 @@
 .infoBox a {
     font-size: 0.8rem;
     margin: 0rem 1rem 2rem 1rem;
+    color: mediumturquoise;
 }
 .infoBoxTabs {
     width: calc(100% - 0.6rem);

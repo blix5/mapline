@@ -26,7 +26,7 @@
     cursor: pointer;
     height: 0.5rem;
     border-radius: 0.25rem;
-    margin-top: 1.1rem;
+    margin-top: 0.7rem;
     margin-left: 1.3rem;
     
     transform: rotate(90deg);
@@ -50,6 +50,33 @@
     appearance: none;
     border: none;
     background: transparent;
+}
+
+.search {
+    position: absolute;
+    z-index: 115;
+    outline: none;
+    background-color: rgba(0,0,0,0.7);
+    color: white;
+    font-family: 'Futura', 'Avenir', 'Century Gothic', 'Gill Sans', 'Avant Garde Gothic', 'Helvetica Neue', 'Proxima Nova', 'Lato', Helvetica, Arial, sans-serif;
+    border: none;
+    padding: 0.4rem 0.4rem 0.4rem 0.4rem;
+    margin: 0.4rem 1.2rem 0.4rem 0.4rem;
+    border-radius: 0.4rem;
+    width: 10rem;
+}
+.searchResults {
+    position: absolute;
+    z-index: 115;
+    overflow: hidden;
+    background-color: rgba(0,0,0,0.5);
+    outline: 0.5rem solid rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    opacity: 0.9;
+    margin-left: 0.65rem;
+    margin-top: 2.7rem;
+
+    transition: transform 0.3s ease, width 0.3s ease;
 }
 
 .numberLine {
@@ -444,35 +471,35 @@
 }
 
 .work {
-    background-color: #72c2c5;
-    border: 0.3rem solid #426263;
-    box-shadow: inset 0rem 25px #426263;
-    color: #72c2c5;
+    background-color: #72c5b3;
+    border: 0.3rem solid #42635c;
+    box-shadow: inset 0rem 25px #42635c;
+    color: #72c5b3;
 }
-.work p { color: #426263; }
-.work .filterIcon { fill: #426263; }
+.work p { color: #42635c; }
+.work .filterIcon { fill: #42635c; }
 .work:hover, .work.selectedEvent {
     box-shadow: none;
-    color: #426263;
+    color: #42635c;
 }
-.work:hover { background-color: #9fd7d9; }
-.workl { background-color: #426263; }
-.workp { fill: #72c2c5; }
-.workp:hover { fill: #9fd7d9; }
-.eventDiv:hover .worke, .eventDiv .selectedEvent .worke { background-color: #426263; }
-.eventDiv:hover .workArrow, .eventDiv .selectedEvent .workArrow { fill: #72c2c5; }
+.work:hover { background-color: #9fd9c4; }
+.workl { background-color: #42635c; }
+.workp { fill: #72c5b3; }
+.workp:hover { fill: #9fd9c4; }
+.eventDiv:hover .worke, .eventDiv .selectedEvent .worke { background-color: #42635c; }
+.eventDiv:hover .workArrow, .eventDiv .selectedEvent .workArrow { fill: #72c5b3; }
 .workText {
-    color: #9fd7d9;
-    background: linear-gradient(to right, rgba(66, 98, 99, 0.3) calc(0%), transparent 100%);
+    color: #9fd9c4;
+    background: linear-gradient(to right, rgba(66, 99, 92, 0.3) calc(0%), transparent 100%);
 }
 .workTab:hover {
-    color: #426263;
-    background-color: #9fd7d9;
+    color: #42635c;
+    background-color: #9fd9c4;
 }
-.workTab svg { fill: #426263; }
+.workTab svg { fill: #42635c; }
 .workTab svg:hover {
-    background-color: #426263;
-    fill: #9fd7d9;
+    background-color: #42635c;
+    fill: #9fd9c4;
 }
 
 .court {
@@ -505,6 +532,38 @@
 .courtTab svg:hover {
     background-color: #8f4e12;
     fill: #ebc79f;
+}
+
+.period {
+    background-color: #9a9ed4;
+    border: 0.3rem solid #3f3e63;
+    box-shadow: inset 0rem 25px #3f3e63;
+    color: #9a9ed4;
+}
+.period p { color: #3f3e63; }
+.period .filterIcon { fill: #3f3e63; }
+.period:hover, .period.selectedEvent {
+    box-shadow: none;
+    color: #3f3e63;
+}
+.period:hover { background-color: #aeb1db; }
+.periodl { background-color: #3f3e63; }
+.periodp { fill: #9a9ed4; }
+.periodp:hover { fill: #aeb1db; }
+.eventDiv:hover .periode, .eventDiv .selectedEvent .periode { background-color: #3f3e63; }
+.eventDiv:hover .periodArrow, .eventDiv .selectedEvent .periodArrow { fill: #9a9ed4; }
+.periodText {
+    color: #aeb1db;
+    background: linear-gradient(to right, rgba(63, 62, 99, 0.3) calc(0%), transparent 100%);
+}
+.periodTab:hover {
+    color: #3f3e63;
+    background-color: #aeb1db;
+}
+.periodTab svg { fill: #3f3e63; }
+.periodTab svg:hover {
+    background-color: #3f3e63;
+    fill: #aeb1db;
 }
 
 .ruling {
