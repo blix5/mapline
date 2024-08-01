@@ -133,7 +133,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
     const search = e.target.value.trim().toLowerCase();
     if (search && fuse) {
       const results = fuse.search(search);
-      setSearchMatches(results.map(result => result.item).slice(0, 10));
+      setSearchMatches(results.map(result => result.item).slice(0, 20));
     } else {
       setSearchMatches([]);
     }
@@ -559,11 +559,12 @@ export default function Home({ states, locations, events, onCompleted, onError }
                     {(locSel == event.location && (
                       <>
                         <div className={timelineStyles.eventspListArrow} style={{transformOrigin:`center left`,transform:`translate(${0}px, -50%) scale(0.6)`}}></div>
-                        <div className={timelineStyles.eventspList} style={{width:`${Math.max(...eventsPinDivRef.current.map(el => el ? el.offsetWidth : 0))}px`,pointerEvents:'auto',height:`calc(${eventsAtLocLen(event) * 4}rem - 0.6rem)`,
-                            transformOrigin:`center left`,transform:`translate(${0}px, -50%) scale(0.6)`}}>
+                        <div className={`${utilStyles.scrollable} ${timelineStyles.eventspList}`} style={{width:`calc(${Math.max(...eventsPinDivRef.current.map(el => el ? el.offsetWidth : 0))}px +
+                            ${eventsAtLocLen(event) * 72 - 10 > 450 ? 0.9 : 0}rem)`,pointerEvents:'auto',height:`calc(${Math.min(eventsAtLocLen(event) * 72 - 10, 450)}px)`,
+                            transformOrigin:`center left`,transform:`translate(${0}px, -50%) scale(0.6)`,overflowY:`${eventsAtLocLen(event) * 72 - 10 < 450 ? 'hidden' : 'scroll'}`}} onWheel={(e) => e.stopPropagation()}>
                           {events.filter(e => e !== null && e !== undefined && eventVisible(e) && e.location == event.location).map((eInList, j) => (
                             <>
-                              <div ref={el => setRef(eventsPinDivRef, el, j)} className={`${timelineStyles.events} ${timelineStyles.eventspListEvent} ${timelineStyles[eInList.category]}`} style={{transform:`translate(0px, ${indexAtLoc(eInList) * 4}rem)`,
+                              <div ref={el => setRef(eventsPinDivRef, el, j)} className={`${timelineStyles.events} ${timelineStyles.eventspListEvent} ${timelineStyles[eInList.category]}`} style={{transform:`translate(0px, ${indexAtLoc(eInList) * 72}px)`,
                                   width:`calc(${(eventsPinRef.current[j]?.offsetWidth < (130 + (eInList?.endDate && 70))) ? (129 + (eInList?.endDate && 70)) : (eventsPinRef.current[j]?.offsetWidth - 0.01)}px + 1rem)`}}
                                   onMouseDownCapture={mapMouseDown}
                                   onMouseUpCapture={(e) => {
@@ -682,38 +683,41 @@ export default function Home({ states, locations, events, onCompleted, onError }
       <input type='text' placeholder='Search... &#x1F50D;' onChange={handleSearch} onKeyDown={searchEnter}
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,left:`calc(${width}px - 11.5rem)`}} className={timelineStyles.search}/>
       {(searchMatches != null && searchMatches != undefined && searchMatches.length > 0) && (
-        <div className={timelineStyles.searchResults} style={{width:`15.7rem`,pointerEvents:'auto',height:`calc(${searchMatches.length * 4}rem - 0.6rem)`,
-            transformOrigin:`top left`,transform:`scale(0.6)`,left:`calc(${width}px - 11.5rem)`}}>
-          {searchMatches.map((eInList, j) => (
-            <div className={`${timelineStyles.events} ${timelineStyles.eventspListEvent} ${timelineStyles[eInList.category]}`} style={{transform:`translate(0px, ${j * 4}rem)`,
-                width:`calc(${(searchResultsRef.current[j]?.offsetWidth < (130 + (eInList?.endDate && 70))) ? (129 + (eInList?.endDate && 70)) : (searchResultsRef.current[j]?.offsetWidth - 0.01)}px + 1rem)`}}
-                onMouseDownCapture={mapMouseDown}
-                onMouseUpCapture={(e) => {
-                  const {x, y} = tempMousePos.current;
-                  if (Math.abs(e.clientX - x) < 2 && Math.abs(e.clientY - y) < 2) {
-                    eventClick(eInList, ((convertDateToDecimal(eInList.startDate) - startYear) * timeScale) + (timeScale * 0.4),
-                      (categoryToIndex(eInList.category) * 65 * 2) + (isEvenIndexInCategory(eInList, events) ? 0 : 65) - ((height - ((height - 64) * borderY) - 200) / 2))
-                  }
-                }}
-            >
-              <div className={timelineStyles.eventDiv} style={{overflow:'hidden',width:'100%',height:'100%'}}>
-                <h6 ref={el => searchResultsRef.current[j] = el} style={{marginTop:4,fontStyle:`${eInList.italics ? 'italic' : 'normal'}`}}>
-                  {eInList.displayName}
-                </h6>
-                <div style={{position:'absolute',width:'100%',height:'1rem',top:'1rem',textAlign:'right'}}>
-                  {eInList?.endDate && (
-                    <p style={{position:'relative'}}>
-                      {` – ${dateFilterRender(eInList.endDate, eInList.specEndDate)}`}
+        <div style={{position:'absolute',width:'100%',left:`calc(${width}px - 11.5rem)`,height:`calc(${Math.min(searchMatches.length * 43 - 5, height - ((height - 64) * borderY) - 210)}px)`,
+            marginLeft:'0.65rem',marginTop:'2.9rem'}}>
+          <div className={`${utilStyles.scrollable} ${timelineStyles.searchResults}`} style={{width:`15.7rem`,pointerEvents:'auto',height:`${100 / 0.6}%`,transformOrigin:`top left`,transform:`scale(0.6)`,
+                overflowY:`${searchMatches.length * 43 - 5 < height - ((height - 64) * borderY) - 210 ? 'hidden' : 'scroll'}`}}>
+            {searchMatches.map((eInList, j) => (
+              <div className={`${timelineStyles.events} ${timelineStyles.eventspListEvent} ${timelineStyles[eInList.category]}`} style={{transform:`translate(0px, ${j * 72}px)`,
+                  width:`calc(${(searchResultsRef.current[j]?.offsetWidth < (130 + (eInList?.endDate && 70))) ? (129 + (eInList?.endDate && 70)) : (searchResultsRef.current[j]?.offsetWidth - 0.01)}px + 1rem)`,maxWidth:`15.7rem`}}
+                  onMouseDownCapture={mapMouseDown}
+                  onMouseUpCapture={(e) => {
+                    const {x, y} = tempMousePos.current;
+                    if (Math.abs(e.clientX - x) < 2 && Math.abs(e.clientY - y) < 2) {
+                      eventClick(eInList, ((convertDateToDecimal(eInList.startDate) - startYear) * timeScale) + (timeScale * 0.4),
+                        (categoryToIndex(eInList.category) * 65 * 2) + (isEvenIndexInCategory(eInList, events) ? 0 : 65) - ((height - ((height - 64) * borderY) - 200) / 2))
+                    }
+                  }}
+              >
+                <div className={timelineStyles.eventDiv} style={{overflow:'hidden',width:'100%',height:'100%'}}>
+                  <h6 ref={el => searchResultsRef.current[j] = el} style={{marginTop:4,fontStyle:`${eInList.italics ? 'italic' : 'normal'}`}}>
+                    {eInList.displayName}
+                  </h6>
+                  <div style={{position:'absolute',width:'100%',height:'1rem',top:'1rem',textAlign:'right'}}>
+                    {eInList?.endDate && (
+                      <p style={{position:'relative'}}>
+                        {` – ${dateFilterRender(eInList.endDate, eInList.specEndDate)}`}
+                      </p>
+                    )}
+                    <p style={{position:'relative',display:'inline-block'}} className={timelineStyles.startDate}>
+                      {dateFilterRender(eInList.startDate, eInList.specStartDate)}
                     </p>
-                  )}
-                  <p style={{position:'relative',display:'inline-block'}} className={timelineStyles.startDate}>
-                    {dateFilterRender(eInList.startDate, eInList.specStartDate)}
-                  </p>
+                  </div>
+                  <FilterIcon className={timelineStyles.filterIcon} filter={eInList.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
                 </div>
-                <FilterIcon className={timelineStyles.filterIcon} filter={eInList.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
       <section id={`timeline`} className={`${timelineStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
