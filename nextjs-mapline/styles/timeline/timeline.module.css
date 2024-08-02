@@ -375,8 +375,91 @@
 .events:hover {
     z-index: 300;
     border: 0.3rem solid transparent;
+    cursor: pointer;
 }
 
+.period {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0.7;
+    z-index: 50;
+    white-space: nowrap;
+
+    transition: opacity 0.3s ease-out, background-color 0.3s ease-out;
+    -moz-transition: opacity 0.3s ease-out, background-color 0.3s ease-out;
+    -ms-transition: opacity 0.3s ease-out, background-color 0.3s ease-out;
+    -webkit-transition: opacity 0.3s ease-out, background-color 0.3s ease-out;
+}
+.period:before {
+    content: " ";
+    height: 100%;
+    left: -10rem;
+    position: absolute;
+    top: 0;
+    width: 10rem;
+
+    transition: box-shadow 0.3s ease-out;
+    -moz-transition: box-shadow 0.3s ease-out;
+    -ms-transition: box-shadow 0.3s ease-out;
+    -webkit-transition: box-shadow 0.3s ease-out;
+}
+.period:after {
+    content: " ";
+    height: 100%;
+    position: absolute;
+    top: 0;
+    right: -10rem;
+    width: 10rem;
+
+    transition: box-shadow 0.3s ease-out;
+    -moz-transition: box-shadow 0.3s ease-out;
+    -ms-transition: box-shadow 0.3s ease-out;
+    -webkit-transition: box-shadow 0.3s ease-out;
+}
+.periodText {
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 50;
+    white-space: nowrap;
+}
+.period:hover {
+    cursor: pointer;
+    z-index: 51;
+    opacity: 1;
+}
+.period:hover + .periodText {
+    z-index: 51;
+}
+.periodText h6, .periodText p {
+    position: relative;
+    font-weight: 100;
+    display: inline;
+    font-size: 0.8rem;
+    margin: 0rem 0.5rem 0rem 0.5rem;
+    z-index: 50;
+
+    transition: color 0.3s ease-out;
+    -moz-transition: color 0.3s ease-out;
+    -ms-transition: color 0.3s ease-out;
+    -webkit-transition: color 0.3s ease-out;
+}
+.filterIconPeriod {
+    position: relative;
+    width: 1rem;
+    height: 1rem;
+    top: 0.2rem;
+    margin: 0rem 0.5rem 0rem 0.5rem;
+
+    transition: fill 0.3s ease-out;
+    -moz-transition: fill 0.3s ease-out;
+    -ms-transition: fill 0.3s ease-out;
+    -webkit-transition: fill 0.3s ease-out;
+}
+
+/*** EVENT ***/
 .event {
     background-color: #F7E38A;
     border: 0.3rem solid #A38B31;
@@ -389,8 +472,20 @@
     box-shadow: none;
     color: #A38B31;
 }
-.event:hover { background-color: #f7ebb3; }
-.eventl { background-color: #A38B31; }
+.eventPeriod:before { box-shadow: -10rem 0 5rem -5rem #A38B31 inset; }
+.eventPeriod:after { box-shadow: 10rem 0 5rem -5rem #A38B31 inset; }
+.eventPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #f7ebb3 inset; }
+.eventPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #f7ebb3 inset; }
+.eventPeriod * {
+    color: #F7E38A;
+    fill: #F7E38A;
+}
+.period:hover + .eventPeriod * {
+    color: #A38B31;
+    fill: #A38B31;
+}
+.event:hover, .eventPeriod:hover { background-color: #f7ebb3; }
+.eventl, .eventPeriod { background-color: #A38B31; }
 .eventp { fill: #F7E38A; }
 .eventp:hover { fill: #f7ebb3; }
 .eventDiv:hover .evente, .eventDiv .selectedEvent .evente { background-color: #A38B31; }
@@ -409,6 +504,7 @@
     fill: #f7ebb3;
 }
 
+/*** LEGISLATION ***/
 .legislation {
     background-color: #98de8e;
     border: 0.3rem solid #3E7B2E;
@@ -421,8 +517,20 @@
     box-shadow: none;
     color: #3E7B2E;
 }
-.legislation:hover { background-color: #bae9b1; }
-.legislationl { background-color: #3E7B2E; }
+.legislationPeriod:before { box-shadow: -10rem 0 5rem -5rem #3E7B2E inset; }
+.legislationPeriod:after { box-shadow: 10rem 0 5rem -5rem #3E7B2E inset; }
+.legislationPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #bae9b1 inset; }
+.legislationPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #bae9b1 inset; }
+.legislationPeriod * {
+    color: #98de8e;
+    fill: #98de8e;
+}
+.period:hover + .legislationPeriod * {
+    color: #3E7B2E;
+    fill: #3E7B2E;
+}
+.legislation:hover, .legislationPeriod:hover { background-color: #bae9b1; }
+.legislationl, .legislationPeriod { background-color: #3E7B2E; }
 .legislationp { fill: #98de8e; }
 .legislationp:hover { fill: #bae9b1; }
 .eventDiv:hover .legislatione, .eventDiv .selectedEvent .legislatione { background-color: #3E7B2E; }
@@ -441,6 +549,7 @@
     fill: #bae9b1;
 }
 
+/*** FOREIGN ***/
 .foreign {
     background-color: #d291e0;
     border: 0.3rem solid #75337c;
@@ -453,8 +562,20 @@
     box-shadow: none;
     color: #75337c;
 }
-.foreign:hover { background-color: #dcb8e4; }
-.foreignl { background-color: #75337c; }
+.foreignPeriod:before { box-shadow: -10rem 0 5rem -5rem #75337c inset; }
+.foreignPeriod:after { box-shadow: 10rem 0 5rem -5rem #75337c inset; }
+.foreignPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #dcb8e4 inset; }
+.foreignPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #dcb8e4 inset; }
+.foreignPeriod * {
+    color: #d291e0;
+    fill: #d291e0;
+}
+.period:hover + .foreignPeriod * {
+    color: #75337c;
+    fill: #75337c;
+}
+.foreign:hover, .foreignPeriod:hover { background-color: #dcb8e4; }
+.foreignl, .foreignPeriod { background-color: #75337c; }
 .foreignp { fill: #d291e0; }
 .foreignp:hover { fill: #dcb8e4; }
 .eventDiv:hover .foreigne, .eventDiv .selectedEvent .foreigne { background-color: #75337c; }
@@ -473,6 +594,7 @@
     fill: #dcb8e4;
 }
 
+/*** WORK ***/
 .work {
     background-color: #72c5b3;
     border: 0.3rem solid #42635c;
@@ -485,8 +607,20 @@
     box-shadow: none;
     color: #42635c;
 }
-.work:hover { background-color: #9fd9c4; }
-.workl { background-color: #42635c; }
+.workPeriod:before { box-shadow: -10rem 0 5rem -5rem #42635c inset; }
+.workPeriod:after { box-shadow: 10rem 0 5rem -5rem #42635c inset; }
+.workPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #9fd9c4 inset; }
+.workPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #9fd9c4 inset; }
+.workPeriod * {
+    color: #72c5b3;
+    fill: #72c5b3;
+}
+.period:hover + .workPeriod * {
+    color: #42635c;
+    fill: #42635c;
+}
+.work:hover, .workPeriod:hover { background-color: #9fd9c4; }
+.workl, .workPeriod { background-color: #42635c; }
 .workp { fill: #72c5b3; }
 .workp:hover { fill: #9fd9c4; }
 .eventDiv:hover .worke, .eventDiv .selectedEvent .worke { background-color: #42635c; }
@@ -505,6 +639,7 @@
     fill: #9fd9c4;
 }
 
+/*** COURT ***/
 .court {
     background-color: #e9ba84;
     border: 0.3rem solid #8f4e12;
@@ -517,8 +652,20 @@
     box-shadow: none;
     color: #8f4e12;
 }
-.court:hover { background-color: #ebc79f; }
-.courtl { background-color: #8f4e12; }
+.courtPeriod:before { box-shadow: -10rem 0 5rem -5rem #8f4e12 inset; }
+.courtPeriod:after { box-shadow: 10rem 0 5rem -5rem #8f4e12 inset; }
+.courtPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #ebc79f inset; }
+.courtPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #ebc79f inset; }
+.courtPeriod * {
+    color: #e9ba84;
+    fill: #e9ba84;
+}
+.period:hover + .courtPeriod * {
+    color: #8f4e12;
+    fill: #8f4e12;
+}
+.court:hover, .courtPeriod:hover { background-color: #ebc79f; }
+.courtl, .courtPeriod { background-color: #8f4e12; }
 .courtp { fill: #e9ba84; }
 .courtp:hover { fill: #ebc79f; }
 .eventDiv:hover .courte, .eventDiv .selectedEvent .courte { background-color: #8f4e12; }
@@ -537,38 +684,52 @@
     fill: #ebc79f;
 }
 
-.period {
-    background-color: #9a9ed4;
+/*** TREND ***/
+.trend {
+    background-color: #9195d1;
     border: 0.3rem solid #3f3e63;
     box-shadow: inset 0rem 25px #3f3e63;
-    color: #9a9ed4;
+    color: #9195d1;
 }
-.period p { color: #3f3e63; }
-.period .filterIcon { fill: #3f3e63; }
-.period:hover, .period.selectedEvent {
+.trend p { color: #3f3e63; }
+.trend .filterIcon { fill: #3f3e63; }
+.trend:hover, .trend.selectedEvent {
     box-shadow: none;
     color: #3f3e63;
 }
-.period:hover { background-color: #aeb1db; }
-.periodl { background-color: #3f3e63; }
-.periodp { fill: #9a9ed4; }
-.periodp:hover { fill: #aeb1db; }
-.eventDiv:hover .periode, .eventDiv .selectedEvent .periode { background-color: #3f3e63; }
-.eventDiv:hover .periodArrow, .eventDiv .selectedEvent .periodArrow { fill: #9a9ed4; }
-.periodText {
+.trendPeriod:before { box-shadow: -10rem 0 5rem -5rem #3f3e63 inset; }
+.trendPeriod:after { box-shadow: 10rem 0 5rem -5rem #3f3e63 inset; }
+.trendPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #aeb1db inset; }
+.trendPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #aeb1db inset; }
+.trendPeriod * {
+    color: #9195d1;
+    fill: #9195d1;
+}
+.period:hover + .trendPeriod * {
+    color: #3f3e63;
+    fill: #3f3e63;
+}
+.trend:hover, .trendPeriod:hover { background-color: #aeb1db; }
+.trendl, .trendPeriod { background-color: #3f3e63; }
+.trendp { fill: #9195d1; }
+.trendp:hover { fill: #aeb1db; }
+.eventDiv:hover .trende, .eventDiv .selectedEvent .trende { background-color: #3f3e63; }
+.eventDiv:hover .trendArrow, .eventDiv .selectedEvent .trendArrow { fill: #9195d1; }
+.trendText {
     color: #aeb1db;
     background: linear-gradient(to right, rgba(63, 62, 99, 0.3) calc(0%), transparent 100%);
 }
-.periodTab:hover {
+.trendTab:hover {
     color: #3f3e63;
     background-color: #aeb1db;
 }
-.periodTab svg { fill: #3f3e63; }
-.periodTab svg:hover {
+.trendTab svg { fill: #3f3e63; }
+.trendTab svg:hover {
     background-color: #3f3e63;
     fill: #aeb1db;
 }
 
+/*** RULING ***/
 .ruling {
     background-color: #d28b8b;
     border: 0.3rem solid #853030;
@@ -581,8 +742,20 @@
     box-shadow: none;
     color: #853030;
 }
-.ruling:hover { background-color: #dca7a7; }
-.rulingl { background-color: #853030; }
+.rulingPeriod:before { box-shadow: -10rem 0 5rem -5rem #853030 inset; }
+.rulingPeriod:after { box-shadow: 10rem 0 5rem -5rem #853030 inset; }
+.rulingPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #dca7a7 inset; }
+.rulingPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #dca7a7 inset; }
+.rulingPeriod * {
+    color: #d28b8b;
+    fill: #d28b8b;
+}
+.period:hover + .rulingPeriod * {
+    color: #853030;
+    fill: #853030;
+}
+.ruling:hover, .rulingPeriod:hover { background-color: #dca7a7; }
+.rulingl, .rulingPeriod { background-color: #853030; }
 .rulingp { fill: #d28b8b; }
 .rulingp:hover { fill: #dca7a7; }
 .eventDiv:hover .rulinge, .eventDiv .selectedEvent .rulinge { background-color: #853030; }

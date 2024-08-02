@@ -4,25 +4,25 @@ const categoryToIndex = (category) => {
     var index;
     switch(category) {
         case "event":
-            index = 0;
-            break;
-        case "legislation":
             index = 1;
             break;
-        case "foreign":
+        case "legislation":
             index = 2;
             break;
-        case "work":
+        case "foreign":
             index = 3;
             break;
-        case "court":
+        case "work":
             index = 4;
             break;
-        case "period":
+        case "court":
             index = 5;
             break;
-        case "ruling":
+        case "trend":
             index = 6;
+            break;
+        case "ruling":
+            index = 7;
             break;
         default:
             index = -1;
