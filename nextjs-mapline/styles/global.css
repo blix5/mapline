@@ -8,6 +8,15 @@
   src: local('Futura Bold'), url('../public/futura/futura_bold.ttf') format('truetype');
 }
 @font-face {
+  font-family: 'Futura Light';
+  src: local('Futura Light'), url('../public/futura/futura_light.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Futura Light';
+  font-weight: bold;
+  src: local('Futura Heavy'), url('../public/futura/futura_heavy.ttf') format('truetype');
+}
+@font-face {
   font-family: 'Futura';
   font-style: italic;
   src: local('Futura Medium Italic'), url('../public/futura/futura_medium_italic.ttf') format('truetype');

@@ -72,7 +72,7 @@ const convertDateToDecimal = (dateString) => {
 
 
 export default function Home({ states, locations, events, onCompleted, onError }) {
-  const startYear = 1750;
+  const startYear = 1492;
   const endYear = 2020;
 
   const [inHidden, setInHidden] = useState(-1);

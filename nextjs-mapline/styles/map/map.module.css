@@ -57,9 +57,10 @@
 }
 .lccRiversLow {
     stroke: #4B5B96;
-    stroke-width: 3px;
+    stroke-width: 2px;
     z-index: 112;
     fill: none;
+    opacity: 0.5;
 }
 .lccRiverLabel {
     opacity: 0.2;

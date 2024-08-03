@@ -67,7 +67,8 @@
     margin: 0.5rem 0 0.3rem 0;
 }
 .infoBoxDiv h4 {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.02rem;
     font-style: italic;
     font-weight: 100;
     color: gray;
@@ -88,12 +89,12 @@
     cursor: pointer;
 }
 .infoBoxInfo {
-    font-family: 'Times New Roman', Times, Georgia, Garamond, serif;
+    border-top: solid 0.1rem lightgray;
+    font-family: 'Futura Light';
     color: white;
-    font-weight: 100;
     line-height: 120%;
     font-size: 0.8rem;
-    margin: -0.3rem 0.5rem 1rem 1rem;
+    margin: 0.6rem 0.5rem 1rem 1rem;
 }
 .infoBox a {
     font-size: 0.8rem;
