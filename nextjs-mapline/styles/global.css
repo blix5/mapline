@@ -1,3 +1,14 @@
+@font-face {
+  font-family: 'Futura';
+  font-weight: 'medium';
+  src: local('Futura Medium'), url('../public/futura-pt/futura_medium.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Futura';
+  font-weight: bold;
+  src: local('Futura Bold'), url('../public/futura-pt/futura_bold.ttf') format('truetype');
+}
+
 html,
 body {
   padding: 0;
