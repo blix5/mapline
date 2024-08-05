@@ -10,6 +10,7 @@
 
     overflow-x: scroll;
     overflow-y: scroll;
+    touch-action: none;
 
     filter: drop-shadow(0 0 0.5rem rgba(0,0,0,0.5));
     -webkit-filter: drop-shadow(0 0 0.5rem rgba(0,0,0,0.5));
@@ -58,7 +59,7 @@
     outline: none;
     background-color: rgba(0,0,0,0.7);
     color: white;
-    font-family: 'Futura', 'Avenir', 'Century Gothic', 'Gill Sans', 'Avant Garde Gothic', 'Helvetica Neue', 'Proxima Nova', 'Lato', Helvetica, Arial, sans-serif;
+    font-family: 'Futura', sans-serif;
     border: none;
     padding: 0.4rem 0.4rem 0.4rem 0.4rem;
     margin: 0.4rem 1.2rem 0.4rem 0.4rem;
@@ -130,11 +131,13 @@
     -webkit-filter: drop-shadow(0 0 0.3rem rgba(0,0,0,0.7));
 }
 
-.markerYear h3 {
+.markerYear input {
     position: absolute;
+    pointer-events: auto;
+    text-align: center;
     font-weight: 100;
     font-size: 1rem;
-    top: -0.5rem;
+    top: 0.5rem;
     color: #E9EAF3;
     z-index: 150;
     background-color: rgba(197, 82, 67, 0.8);
@@ -142,12 +145,15 @@
     padding-right: 0.5rem;
     border: 0.2rem solid rgba(238, 99, 82, 0.8);
     border-radius: 1rem;
+    font-family: 'Futura', sans-serif;
     filter: drop-shadow(0 0 0.3rem rgba(0,0,0,0.7));
     -webkit-filter: drop-shadow(0 0 0.3rem rgba(0,0,0,0.7));
-
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+}
+.markerYear input::-webkit-input-placeholder {
+    color: #E9EAF3;
+}
+.markerYear input:focus {
+    outline: solid white;
 }
 
 .marker {
@@ -429,12 +435,12 @@
     -ms-user-select: none;
     user-select: none;
 }
-.period:hover {
+.period:hover, .selectedPeriod {
     cursor: pointer;
     z-index: 51;
     opacity: 1;
 }
-.period:hover + .periodText {
+.period:hover + .periodText, .selectedPeriod + .periodText {
     z-index: 51;
 }
 .periodText h6, .periodText p {
@@ -478,16 +484,19 @@
 }
 .eventPeriod:before { box-shadow: -10rem 0 5rem -5rem #A38B31 inset; }
 .eventPeriod:after { box-shadow: 10rem 0 5rem -5rem #A38B31 inset; }
+.eventPeriod.selectedPeriod:before { box-shadow: -10rem 0 5rem -5rem #F7E38A inset; }
+.eventPeriod.selectedPeriod:after { box-shadow: 10rem 0 5rem -5rem #F7E38A inset; }
 .eventPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #f7ebb3 inset; }
 .eventPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #f7ebb3 inset; }
 .eventPeriod * {
     color: #F7E38A;
     fill: #F7E38A;
 }
-.period:hover + .eventPeriod * {
+.period:hover + .eventPeriod *, .selectedPeriod + .eventPeriod * {
     color: #A38B31;
     fill: #A38B31;
 }
+.eventPeriod.selectedPeriod { background-color: #F7E38A; }
 .event:hover, .eventPeriod:hover { background-color: #f7ebb3; }
 .eventl, .eventPeriod { background-color: #A38B31; }
 .eventp { fill: #F7E38A; }
@@ -523,16 +532,19 @@
 }
 .legislationPeriod:before { box-shadow: -10rem 0 5rem -5rem #3E7B2E inset; }
 .legislationPeriod:after { box-shadow: 10rem 0 5rem -5rem #3E7B2E inset; }
+.legislationPeriod.selectedPeriod:before { box-shadow: -10rem 0 5rem -5rem #98de8e inset; }
+.legislationPeriod.selectedPeriod:after { box-shadow: 10rem 0 5rem -5rem #98de8e inset; }
 .legislationPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #bae9b1 inset; }
 .legislationPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #bae9b1 inset; }
 .legislationPeriod * {
     color: #98de8e;
     fill: #98de8e;
 }
-.period:hover + .legislationPeriod * {
+.period:hover + .legislationPeriod *, .selectedPeriod + .legislationPeriod * {
     color: #3E7B2E;
     fill: #3E7B2E;
 }
+.legislationPeriod.selectedPeriod { background-color: #98de8e; }
 .legislation:hover, .legislationPeriod:hover { background-color: #bae9b1; }
 .legislationl, .legislationPeriod { background-color: #3E7B2E; }
 .legislationp { fill: #98de8e; }
@@ -568,16 +580,19 @@
 }
 .foreignPeriod:before { box-shadow: -10rem 0 5rem -5rem #75337c inset; }
 .foreignPeriod:after { box-shadow: 10rem 0 5rem -5rem #75337c inset; }
+.foreignPeriod.selectedPeriod:before { box-shadow: -10rem 0 5rem -5rem #d291e0 inset; }
+.foreignPeriod.selectedPeriod:after { box-shadow: 10rem 0 5rem -5rem #d291e0 inset; }
 .foreignPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #dcb8e4 inset; }
 .foreignPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #dcb8e4 inset; }
 .foreignPeriod * {
     color: #d291e0;
     fill: #d291e0;
 }
-.period:hover + .foreignPeriod * {
+.period:hover + .foreignPeriod *, .selectedPeriod + .foreignPeriod * {
     color: #75337c;
     fill: #75337c;
 }
+.foreignPeriod.selectedPeriod { background-color: #d291e0; }
 .foreign:hover, .foreignPeriod:hover { background-color: #dcb8e4; }
 .foreignl, .foreignPeriod { background-color: #75337c; }
 .foreignp { fill: #d291e0; }
@@ -613,16 +628,19 @@
 }
 .workPeriod:before { box-shadow: -10rem 0 5rem -5rem #42635c inset; }
 .workPeriod:after { box-shadow: 10rem 0 5rem -5rem #42635c inset; }
+.workPeriod.selectedPeriod:before { box-shadow: -10rem 0 5rem -5rem #72c5b3 inset; }
+.workPeriod.selectedPeriod:after { box-shadow: 10rem 0 5rem -5rem #72c5b3 inset; }
 .workPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #9fd9c4 inset; }
 .workPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #9fd9c4 inset; }
 .workPeriod * {
     color: #72c5b3;
     fill: #72c5b3;
 }
-.period:hover + .workPeriod * {
+.period:hover + .workPeriod *, .selectedPeriod + .workPeriod * {
     color: #42635c;
     fill: #42635c;
 }
+.workPeriod.selectedPeriod { background-color: #72c5b3; }
 .work:hover, .workPeriod:hover { background-color: #9fd9c4; }
 .workl, .workPeriod { background-color: #42635c; }
 .workp { fill: #72c5b3; }
@@ -658,16 +676,19 @@
 }
 .courtPeriod:before { box-shadow: -10rem 0 5rem -5rem #8f4e12 inset; }
 .courtPeriod:after { box-shadow: 10rem 0 5rem -5rem #8f4e12 inset; }
+.courtPeriod.selectedPeriod:before { box-shadow: -10rem 0 5rem -5rem #e9ba84 inset; }
+.courtPeriod.selectedPeriod:after { box-shadow: 10rem 0 5rem -5rem #e9ba84 inset; }
 .courtPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #ebc79f inset; }
 .courtPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #ebc79f inset; }
 .courtPeriod * {
     color: #e9ba84;
     fill: #e9ba84;
 }
-.period:hover + .courtPeriod * {
+.period:hover + .courtPeriod *, .selectedPeriod + .courtPeriod * {
     color: #8f4e12;
     fill: #8f4e12;
 }
+.courtPeriod.selectedPeriod { background-color: #e9ba84; }
 .court:hover, .courtPeriod:hover { background-color: #ebc79f; }
 .courtl, .courtPeriod { background-color: #8f4e12; }
 .courtp { fill: #e9ba84; }
@@ -703,16 +724,19 @@
 }
 .trendPeriod:before { box-shadow: -10rem 0 5rem -5rem #3f3e63 inset; }
 .trendPeriod:after { box-shadow: 10rem 0 5rem -5rem #3f3e63 inset; }
+.trendPeriod.selectedPeriod:before { box-shadow: -10rem 0 5rem -5rem #9195d1 inset; }
+.trendPeriod.selectedPeriod:after { box-shadow: 10rem 0 5rem -5rem #9195d1 inset; }
 .trendPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #aeb1db inset; }
 .trendPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #aeb1db inset; }
 .trendPeriod * {
     color: #9195d1;
     fill: #9195d1;
 }
-.period:hover + .trendPeriod * {
+.period:hover + .trendPeriod *, .selectedPeriod + .trendPeriod * {
     color: #3f3e63;
     fill: #3f3e63;
 }
+.trendPeriod.selectedPeriod { background-color: #9195d1; }
 .trend:hover, .trendPeriod:hover { background-color: #aeb1db; }
 .trendl, .trendPeriod { background-color: #3f3e63; }
 .trendp { fill: #9195d1; }
@@ -748,16 +772,19 @@
 }
 .rulingPeriod:before { box-shadow: -10rem 0 5rem -5rem #853030 inset; }
 .rulingPeriod:after { box-shadow: 10rem 0 5rem -5rem #853030 inset; }
+.rulingPeriod.selectedPeriod:before { box-shadow: -10rem 0 5rem -5rem #d28b8b inset; }
+.rulingPeriod.selectedPeriod:after { box-shadow: 10rem 0 5rem -5rem #d28b8b inset; }
 .rulingPeriod:hover:before { box-shadow: -10rem 0 5rem -5rem #dca7a7 inset; }
 .rulingPeriod:hover:after { box-shadow: 10rem 0 5rem -5rem #dca7a7 inset; }
 .rulingPeriod * {
     color: #d28b8b;
     fill: #d28b8b;
 }
-.period:hover + .rulingPeriod * {
+.period:hover + .rulingPeriod *, .selectedPeriod + .rulingPeriod * {
     color: #853030;
     fill: #853030;
 }
+.rulingPeriod.selectedPeriod { background-color: #d28b8b; }
 .ruling:hover, .rulingPeriod:hover { background-color: #dca7a7; }
 .rulingl, .rulingPeriod { background-color: #853030; }
 .rulingp { fill: #d28b8b; }

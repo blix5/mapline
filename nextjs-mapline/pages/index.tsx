@@ -30,7 +30,7 @@ import Icon from '../libs/Icon';
 
 import HoverVisibleDiv from '../libs/HoverVisibleDiv';
 
-import DecimalYearToDate from '../libs/dateDecimal';
+import { convertDecimalYearToDate, convertDateToDecimal } from '../libs/dateDecimal';
 import categoryToIndex from '../libs/categoryIndex';
 import { dateFilterRender, convertDate } from '../libs/dateFilterRender';
 import UrlToAbstract from '../libs/wikipediaAbstract';
@@ -63,16 +63,9 @@ const remainderQuadIndexPeriod = (event, events) => {
   return periodIndex % 4;
 }
 
-const convertDateToDecimal = (dateString) => {
-  const month = Number(String(dateString).substring(0, 2));
-  const day = Number(String(dateString).substring(3, 5));
-  const year = Number(String(dateString).substring(6, 10));
-  return year + (month / 12) + (day / 365);
-}
-
 
 export default function Home({ states, locations, events, onCompleted, onError }) {
-  const startYear = 1492;
+  const startYear = 1480;
   const endYear = 2020;
 
   const [inHidden, setInHidden] = useState(-1);
@@ -100,7 +93,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const [timeX, setTimeX] = useQueryState('tpx', parseAsFloat.withDefault(0));
   const [timeY, setTimeY] = useQueryState('tpy', parseAsFloat.withDefault(0));
   const [timeScale, setTimeScale] = useQueryState('tps', parseAsFloat.withDefault(100));
-  const [timeYear, setTimeYear] = useQueryState('year', parseAsFloat.withDefault(startYear));
+  const [timeYear, setTimeYear] = useQueryState('year', parseAsFloat.withDefault(1776.5));
 
   const mapLimX = 2400;
   const mapLimY = 1280;
@@ -186,6 +179,21 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const setRef = (refArray, el, i) => {
     refArray.current[i] = el;
     setRefsUpdated(true);
+  };
+
+  const yearInput = (e) => {
+    if (e.key === 'Enter') {
+      const decimalYear = convertDateToDecimal(e.target.value);
+      if (decimalYear != null) {
+        setTimeYear(decimalYear);
+        const newTime = (timeScale * (decimalYear - startYear + 0.5)) - (width / 2);
+        setTimeX(newTime);
+        setScrolling(true);
+        scroll.scrollTo(newTime, { smooth: true, containerId: 'timeline', duration: 500, horizontal: true });
+      }
+      e.target.value = '';
+      e.target.blur();
+    }
   };
 
   const [parents, setParents] = useState([]);
@@ -277,7 +285,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
     timelineRef.current.scrollLeft = xScroll;
 
     setTimeX(newX);
-    setTimeYear(((timeX + width / 2) / timeScale) + (startYear - 0.5));
+    setTimeYear((((timeX) + width / 2) / timeScale) + (startYear - 0.5));
     setScrolling(true);
   }
   const onTimelineScroll = (e) => {
@@ -292,7 +300,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
     setTimeX(newX);
     setTimeY(newY);
-    setTimeYear(((timeX + width / 2) / timeScale) + (startYear - 0.5));
+    setTimeYear((((timeX) + width / 2) / timeScale) + (startYear - 0.5));
     setScrolling(true);
   }
   const onTimelineZoom = (value) => {
@@ -339,7 +347,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
       return null;;
     }
   }
-  const getEventX = (event) => { return ((convertDateToDecimal(event.startDate) - startYear) * timeScale) + (timeScale * 0.4); }
+  const getEventX = (event) => { return ((convertDateToDecimal(event.startDate) - startYear + 0.5) * timeScale); }
   const getEventXEnd = (event) => { return ((!event?.endDate || ((convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate)) * timeScale < 130)) ? ((convertDateToDecimal(event.startDate) - startYear) * timeScale + 130) :
       ((convertDateToDecimal(event.endDate) - startYear) * timeScale)) + (timeScale * 0.4); }
   const getEventY = (event) => { return ((event.period) ? (remainderQuadIndexPeriod(event, events) * (65 / 2)) : ((categoryToIndex(event.category) * 65 * 2) + (isEvenIndexInCategory(event, events) ? 0 : 65))); }
@@ -511,8 +519,8 @@ export default function Home({ states, locations, events, onCompleted, onError }
               </>
             ))}
 
-            {locations.map((location, index) => (convertDateToDecimal(location.foundDate) <= timeYear) &&
-                ((location.size == 5) || (location.size == 4 && mapScale > 0.4) || (location.size == 3 && mapScale > 1) || (location.size == 2 && mapScale > 1.7) || (location.size == 1 && mapScale > 2.5) || (locSel == location.id)) && (
+            {locations.map((location, index) => (((convertDateToDecimal(location.foundDate) <= timeYear) &&
+                ((location.size == 5) || (location.size == 4 && mapScale > 0.4) || (location.size == 3 && mapScale > 1) || (location.size == 2 && mapScale > 1.7) || (location.size == 1 && mapScale > 2.5))) || (location.id == locSel)) && (
               <>
                 <div style={{transformOrigin:`top left`,transform:`scale(${(location.size / 10 + 0.3) / mapScale + 0.1})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:115,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
                   <div className={`${mapStyles.locationDot}`} style={{opacity:(locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) || locSel == location.id) ? 1 : (0.3 + (location.size / 10))}}></div>
@@ -780,11 +788,10 @@ export default function Home({ states, locations, events, onCompleted, onError }
               ) : (
                 <div style={{zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>
 
-                  <div className={`${timelineStyles.period} ${timelineStyles[event.category + 'Period']}`} style={{width:`calc(${timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))}px + 2rem)`,
+                  <div className={`${timelineStyles.period} ${timelineStyles[event.category + 'Period']} ${event.id == eventSelected && timelineStyles.selectedPeriod}`} style={{width:`calc(${timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))}px + 2rem)`,
                       height:'29px',transform:`translate(calc(${getEventX(event)}px - 1rem), calc(${getEventY(event)}px + 0.1rem))`,
                       WebkitTransform:`translate(${getEventX(event)}px), calc(${getEventY(event)}px + 0.1rem))`,
-                      msTransform:`translate(${getEventX(event)}px), calc(${getEventY(event)}px + 0.1rem))`}} onClick={() => eventClick(event)}
-                  >
+                      msTransform:`translate(${getEventX(event)}px), calc(${getEventY(event)}px + 0.1rem))`}} onClick={() => eventClick(event)}>
                   </div>
                   <div className={`${timelineStyles.periodText} ${timelineStyles[event.category + 'Period']}`} style={{backgroundColor:'transparent',
                         transform:`translate(calc(${(Math.max(getEventX(event), timeX) + Math.min(getEventXEnd(event), timeX + width)) / 2}px - 50%), calc(${getEventY(event)}px + 0.05rem))`}}>
@@ -805,16 +812,28 @@ export default function Home({ states, locations, events, onCompleted, onError }
           {/* VERTICAL LINES */}
           {[...Array(endYear - startYear + 1)].map((e, i) => (
             (Math.abs((i * timeScale) - timeX) < width * 2) && (
-            <>
-              <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,
-                  msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-              <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
-                  msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-              <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,
-                  msTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-              <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,
-                  msTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-            </>)
+              <>
+                {(timeScale > 70) ? (
+                  <>
+                  <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,
+                      msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+                  <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
+                      msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+                  <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,
+                      msTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+                  <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,
+                      msTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,
+                          msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,position:'absolute',width:`${i % 2 == 0 ? 0.3 : 0.15}rem`,height:`100%`,top:0,backgroundColor:'#333443'}}></div>
+                    <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
+                        msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+                  </>
+                )}
+              </>
+            )
           ))}
 
           {/* HORIZONTAL LINES */}
@@ -841,26 +860,34 @@ export default function Home({ states, locations, events, onCompleted, onError }
       {/* NUMBER LINE — YEARS */}
       <section className={`${timelineStyles.numberLine} ${utilStyles.scrollable}`} onScroll={onNumberLineScroll} ref={numberLineRef}>
         <div style={{width:timeLimX}}>
-          <div style={{position:'absolute',transform:`translate(${((endYear - startYear) * timeScale)}px)`,WebkitTransform:`translate(${((endYear - startYear) * timeScale)}px)`,
-              msTransform:`translate(${((endYear - startYear) * timeScale)}px)`,opacity:0}}>
-                safari sucks
-          </div>
           {[...Array(endYear - startYear + 1)].map((e, i) => (
             (Math.abs((i * timeScale) - timeX) < width * 2) && (
               <>
-                {(timeScale > 100 || i % 2 == 0) && (
-                  <h2 style={{transform:`translate(${(i * timeScale)}px, 0rem)`,WebkitTransform:`translate(${(i * timeScale)}px, 0rem)`,msTransform:`translate(${(i * timeScale)}px, 0rem)`,width:`${timeScale}px`,textAlign:'center'}}>
+                {(timeScale > 100 || (i % 2 == 0 && (timeScale > 40 || i % 4 == 0))) && (
+                  <h2 style={{transform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,WebkitTransform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,
+                      msTransform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,width:`${timeScale > 100 ? timeScale : (timeScale * 2)}px`,textAlign:'center'}}>
                     {(i + startYear)}
                   </h2>
                 )}
-                <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,
-                    msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'1rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
-                    msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.7rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,
-                    msTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,
-                    msTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                {(timeScale > 70) ? (
+                  <>
+                    <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,
+                        msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'1rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                    <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
+                        msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.7rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                    <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,
+                        msTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                    <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,
+                        msTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,
+                          msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,position:'absolute',width:`${i % 2 == 0 ? 0.3 : 0.15}rem`,height:`${i % 2 == 0 ? 1 : 0.7}rem`,top:0,backgroundColor:'#E9EAF3'}}></div>
+                    <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
+                        msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+                  </>
+                )}
               </>
             )
           ))}
@@ -872,9 +899,8 @@ export default function Home({ states, locations, events, onCompleted, onError }
         <div style={{height:height - ((height - 64) * borderY),opacity:`${scrolling ? 1 : 0.5}`,transition:`opacity ${scrolling ? 0.1 : 1}s`,WebkitTransition:`opacity ${scrolling ? 0.1 : 1}s`,msTransition:`opacity ${scrolling ? 0.1 : 1}s`}}
             className={`${timelineStyles.markerLine}`}></div>
         <div style={{opacity:`${scrolling ? 1 : 0.5}`,transition:`opacity ${scrolling ? 0.1 : 1}s`,WebkitTransition:`opacity ${scrolling ? 0.1 : 1}s`,msTransition:`opacity ${scrolling ? 0.1 : 1}s`}} className={timelineStyles.marker}></div>
-        <h3 style={{opacity:`${scrolling ? 1 : 0.5}`,transition:`opacity ${scrolling ? 0.1 : 1}s`,WebkitTransition:`opacity ${scrolling ? 0.1 : 1}s`,msTransition:`opacity ${scrolling ? 0.1 : 1}s`}}>
-          {DecimalYearToDate(timeYear)}
-        </h3>
+        <input type='text' maxLength={10} placeholder={convertDecimalYearToDate(timeYear)} style={{opacity:`${scrolling ? 1 : 0.5}`,width:'7.5rem',transition:`opacity ${scrolling ? 0.1 : 1}s`,WebkitTransition:`opacity ${scrolling ? 0.1 : 1}s`,
+            msTransition:`opacity ${scrolling ? 0.1 : 1}s`}} onKeyDown={yearInput}/>
       </div>
     </Layout>
   );
