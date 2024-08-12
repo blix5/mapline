@@ -78,6 +78,9 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const [isDragging, setIsDragging] = useState(false);
   const [mousePos, setMousePos] = useState({ x: null, y: null });
 
+  const [originalMousePos, setOriginalMousePos] = useState({ x: null, y: null });
+  const [originalMapPos, setOriginalMapPos] = useState({ x: null, y: null });
+
   const tempMousePos = useRef({x: 0, y: 0});
   const mapMouseDown = (e) => {
     tempMousePos.current = {x: e.clientX, y: e.clientY};
@@ -243,24 +246,29 @@ export default function Home({ states, locations, events, onCompleted, onError }
       return () => clearTimeout(timer);
     }
   }, [scrolling]);
-  const onMapScroll = (e) => {
+  const onMapScroll = useCallback((e) => {
     const delta = e.deltaY * -0.003;
-    var newScale = mapScale + delta;
-    if(newScale < 0.25) newScale = 0.25;
-    else if(newScale > 7) newScale = 7;
-
+    let newScale = mapScale + delta;
+  
+    if (newScale < 0.25) newScale = 0.25;
+    else if (newScale > 7) newScale = 7;
+  
     const ratio = 1 - newScale / mapScale;
     const mapHeight = (height - 64) * borderY;
-
-    var newX = mapX + (e.clientX - mapX) * ratio;
-    var newY = mapY + ((e.clientY - 78) - mapY) * ratio;
-    if(newX > width / 2) newX = width / 2; else if(newX < width / 2 - (mapLimX * 2) * mapScale) newX = width / 2 - (mapLimX * 2) * mapScale;
-    if(newY > mapHeight / 2) newY = mapHeight / 2; else if(newY < mapHeight / 2 - (mapLimY * 2) * mapScale) newY = mapHeight / 2 - (mapLimY * 2) * mapScale;
-
+  
+    let newX = mapX + (e.clientX - mapX) * ratio;
+    let newY = mapY + ((e.clientY - 78) - mapY) * ratio;
+  
+    if (newX > width / 2) newX = width / 2;
+    else if (newX < width / 2 - (mapLimX * 2) * mapScale) newX = width / 2 - (mapLimX * 2) * mapScale;
+  
+    if (newY > mapHeight / 2) newY = mapHeight / 2;
+    else if (newY < mapHeight / 2 - (mapLimY * 2) * mapScale) newY = mapHeight / 2 - (mapLimY * 2) * mapScale;
+  
     setMapX(newX);
     setMapY(newY);
     setMapScale(newScale);
-  };
+  }, [mapX, mapY, mapScale, height, borderY, mapLimX, mapLimY, width]);
   const [mapScrolling, setMapScrolling] = useState(false);
   useEffect(() => {
     if(mapScrolling) {
@@ -268,27 +276,33 @@ export default function Home({ states, locations, events, onCompleted, onError }
       return () => clearTimeout(timer);
     }
   }, [mapScrolling]);
-  const onMapDrag = (data) => {
+  const onMapDrag = useCallback((data) => {
     const mapHeight = (height - 64) * borderY;
-
-    var newX = mapX + data.deltaX;
-    var newY = mapY + data.deltaY;
-    if(newX > width / 2) newX = width / 2; else if(newX < width / 2 - mapLimX * mapScale) newX = width / 2 - mapLimX * mapScale;
-    if(newY > mapHeight / 2) newY = mapHeight / 2; else if(newY < mapHeight / 2 - mapLimY * mapScale) newY = mapHeight / 2 - mapLimY * mapScale;
+  
+    let newX = mapX + data.deltaX;
+    let newY = mapY + data.deltaY;
+    
+    if (newX > width / 2) newX = width / 2;
+    else if (newX < width / 2 - mapLimX * mapScale) newX = width / 2 - mapLimX * mapScale;
+  
+    if (newY > mapHeight / 2) newY = mapHeight / 2;
+    else if (newY < mapHeight / 2 - mapLimY * mapScale) newY = mapHeight / 2 - mapLimY * mapScale;
+  
     setMapX(newX);
     setMapY(newY);
-  }
-  const onNumberLineScroll = (e) => {
+  }, [mapX, mapY, height, borderY, mapLimX, mapLimY, mapScale, width]);
+
+  const onNumberLineScroll = useCallback((e) => {
     const xScroll = numberLineRef.current?.scrollLeft;
-
-    var newX = xScroll;
+  
+    let newX = xScroll;
     timelineRef.current.scrollLeft = xScroll;
-
+  
     setTimeX(newX);
-    setTimeYear((((timeX) + width / 2) / timeScale) + (startYear - 0.5));
+    setTimeYear((((newX) + width / 2) / timeScale) + (startYear - 0.5));
     setScrolling(true);
-  }
-  const onTimelineScroll = (e) => {
+  }, [numberLineRef, timelineRef, width, timeScale, startYear]);
+  const onTimelineScroll = useCallback((e) => {
     const xScroll = timelineRef.current?.scrollLeft;
     const yScroll = timelineRef.current?.scrollTop;
     const { scrollTop, scrollHeight, clientHeight } = e.target;
@@ -302,8 +316,8 @@ export default function Home({ states, locations, events, onCompleted, onError }
     setTimeY(newY);
     setTimeYear((((timeX) + width / 2) / timeScale) + (startYear - 0.5));
     setScrolling(true);
-  }
-  const onTimelineZoom = (value) => {
+  }, [timelineRef, numberLineRef, width, timeScale, startYear]);
+  const onTimelineZoom = useCallback((value) => {
     const xTime = (timeX + (width / 2)) / timeScale;
 
     setTimeScale(value);
@@ -315,7 +329,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
     setTimeX(newX);
     setScrolling(true);
-  }
+  }, [timelineRef, numberLineRef, width, timeScale, timeX]);
 
   const getLocX = (event) => {
     if(event?.location) {
@@ -455,7 +469,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
         <svg width={'10rem'} height={'100%'} style={{background:`linear-gradient(90deg, rgba(0,0,0,0.8), transparent)`,zIndex:109}}></svg>
         <Image className={mapStyles.compass} src="/images/compass.png" height={256} width={256} alt="compass" style={{height:`${compassDimensions(height, borderY)}px`,width:`${compassDimensions(height, borderY)}px`,
             top:`calc(${((height - 64) * borderY)}px - ${compassDimensions(height, borderY)}px - 1.2rem)`}}/>
-        <DraggableCore onDrag={(e, data) => {onMapDrag(data)}} onStart={() => setIsDragging(true)} onStop={() => setIsDragging(false)}>
+        <DraggableCore onDrag={(e, data) => {onMapDrag(data)}} onMouseDown={(e) => {setOriginalMousePos({ x: e.clientX, y: e.clientY });setOriginalMapPos({ x: mapX, y: mapY })}} onStart={() => setIsDragging(true)} onStop={() => setIsDragging(false)}>
           <div onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} style={{position:"absolute",width:"100%",height:"100%",zIndex:100,transform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,WebkitTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,
               msTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,transformOrigin:"top left",WebkitTransformOrigin:"top left",msTransformOrigin:"top left"}}
               className={`${(mapScrolling && !isDragging) && mapStyles.draggableMapSlow}`} onMouseDownCapture={mapMouseDown} onMouseUpCapture={mapMouseUp}>
@@ -859,7 +873,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
       {/* NUMBER LINE — YEARS */}
       <section className={`${timelineStyles.numberLine} ${utilStyles.scrollable}`} onScroll={onNumberLineScroll} ref={numberLineRef}>
-        <div style={{width:timeLimX}}>
+        <div style={{position:'absolute',height:'100%',width:`calc(${timeLimX}px)`,overflow:'hidden'}}>
           {[...Array(endYear - startYear + 1)].map((e, i) => (
             (Math.abs((i * timeScale) - timeX) < width * 2) && (
               <>

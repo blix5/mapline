@@ -11,7 +11,7 @@ export default function Layout({ children, page }) {
   return (
     <div className={styles.container}>
       <Head>
-        <link rel="icon" href="/icon.ico" />
+        <link rel="icon" href="/icon_dark.ico" />
         <meta
           name="description"
           content="Mapline - map and a line what you want bro"
