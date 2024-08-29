@@ -314,7 +314,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
     setTimeX(newX);
     setTimeY(newY);
-    setTimeYear((((timeX) + width / 2) / timeScale) + (startYear - 0.5));
+    setTimeYear((((newX) + width / 2) / timeScale) + (startYear - 0.5));
     setScrolling(true);
   }, [timelineRef, numberLineRef, width, timeScale, startYear]);
   const onTimelineZoom = useCallback((value) => {
