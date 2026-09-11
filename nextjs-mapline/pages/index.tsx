@@ -517,9 +517,13 @@ export default function Home({ states, locations, events, onCompleted, onError }
     setMapY(newY);
   }, [mapX, mapY, height, borderY, mapLimX, mapLimY, mapScale, width]);
 
-  // The two scroll containers drive each other's scrollLeft. Remembering the value we
-  // pushed lets the induced scroll event bail out instead of setting state a second time.
-  const syncedScrollX = useRef(null);
+  // The two scroll containers drive each other's scrollLeft. Each gets its own slot
+  // recording the value we last pushed into it, so the scroll event that write induces
+  // is recognised as an echo rather than treated as a fresh user scroll (which would
+  // bounce straight back). Compared with a tolerance because browsers report fractional
+  // scrollLeft under display scaling, and an exact match would let the two ping-pong.
+  const echoGuard = useRef({ timeline: null, numberLine: null });
+  const isEcho = (recorded, actual) => recorded !== null && Math.abs(recorded - actual) < 1;
   // Scroll fires far faster than React can render, so updates are coalesced to one per frame.
   const scrollFrame = useRef(null);
   const pendingScroll = useRef(null);
@@ -548,34 +552,47 @@ export default function Home({ states, locations, events, onCompleted, onError }
   }, [commitScroll]);
 
   const onNumberLineScroll = useCallback(() => {
-    const xScroll = numberLineRef.current?.scrollLeft;
-    if (xScroll == null) return;
-    if (syncedScrollX.current === xScroll) {
-      syncedScrollX.current = null;
-      return;
-    }
-    if (timelineRef.current && timelineRef.current.scrollLeft !== xScroll) {
-      syncedScrollX.current = xScroll;
-      timelineRef.current.scrollLeft = xScroll;
+    const source = numberLineRef.current;
+    if (!source) return;
+    const xScroll = source.scrollLeft;
+    const guard = echoGuard.current;
+
+    if (isEcho(guard.numberLine, xScroll)) {
+      guard.numberLine = null;
+    } else {
+      const target = timelineRef.current;
+      if (target && Math.abs(target.scrollLeft - xScroll) >= 1) {
+        guard.timeline = xScroll;
+        target.scrollLeft = xScroll;
+      }
     }
     queueScroll(xScroll, null);
   }, [queueScroll]);
 
   const onTimelineScroll = useCallback(() => {
-    const xScroll = timelineRef.current?.scrollLeft;
-    const yScroll = timelineRef.current?.scrollTop;
-    if (xScroll == null) return;
-    if (syncedScrollX.current === xScroll) {
-      syncedScrollX.current = null;
-      queueScroll(xScroll, yScroll);
-      return;
-    }
-    if (numberLineRef.current && numberLineRef.current.scrollLeft !== xScroll) {
-      syncedScrollX.current = xScroll;
-      numberLineRef.current.scrollLeft = xScroll;
+    const source = timelineRef.current;
+    if (!source) return;
+    const xScroll = source.scrollLeft;
+    const yScroll = source.scrollTop;
+    const guard = echoGuard.current;
+
+    if (isEcho(guard.timeline, xScroll)) {
+      guard.timeline = null;
+    } else {
+      const target = numberLineRef.current;
+      if (target && Math.abs(target.scrollLeft - xScroll) >= 1) {
+        guard.numberLine = xScroll;
+        target.scrollLeft = xScroll;
+      }
     }
     queueScroll(xScroll, yScroll);
   }, [queueScroll]);
+  const zoomFrame = useRef(null);
+  const pendingZoom = useRef(null);
+  useEffect(() => () => {
+    if (zoomFrame.current !== null) cancelAnimationFrame(zoomFrame.current);
+  }, []);
+
   const onTimelineZoom = useCallback((value) => {
     const xTime = (timeX + (width / 2)) / timeScale;
 
@@ -583,12 +600,28 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
     const newX = (xTime * value) - (width / 2);
 
+    echoGuard.current.numberLine = newX;
+    echoGuard.current.timeline = newX;
     numberLineRef.current.scrollLeft = newX;
     timelineRef.current.scrollLeft = newX;
 
     setTimeX(newX);
     setScrolling(true);
   }, [timelineRef, numberLineRef, width, timeScale, timeX]);
+
+  // Range inputs fire onChange for every pixel of drag; without this the rulers would
+  // be rebuilt dozens of times per second while zooming.
+  const queueZoom = useCallback((value) => {
+    pendingZoom.current = value;
+    if (zoomFrame.current === null) {
+      zoomFrame.current = requestAnimationFrame(() => {
+        zoomFrame.current = null;
+        const next = pendingZoom.current;
+        pendingZoom.current = null;
+        if (next != null) onTimelineZoom(next);
+      });
+    }
+  }, [onTimelineZoom]);
 
   // Only the events inside the horizontal viewport are handed to React. The map used to
   // run over all of them and return `false` for the ones off-screen, so React still
@@ -604,6 +637,75 @@ export default function Home({ states, locations, events, onCompleted, onError }
     });
     return result;
   }, [events, eventMeta, timeX, width, xFromMeta, xEndFromMeta]);
+
+
+  // --- Tick marks -----------------------------------------------------------------
+  // Both rulers are a pure function of the zoom level, so they are built once per zoom
+  // and never touched again. The cull test used to read timeX, which meant all 541 years
+  // were walked and the visible ones rebuilt on every scroll frame — and, worse, the
+  // window was derived from React state that lags the DOM scroll position, so a fast
+  // scroll outran the ticks and they popped in late. That is what made this bar feel
+  // detached from the timeline it is meant to track. Rendering the full span keeps it
+  // purely native scrolling: React does no work here while you scroll, at all.
+  const tickYears = useMemo(() => {
+    const years = [];
+    for (let i = 0; i <= endYear - startYear; i += 1) years.push(i);
+    return years;
+  }, [startYear, endYear]);
+
+  const verticalGridlines = useMemo(() => tickYears.map((i) => (
+    <React.Fragment key={i}>
+      {(timeScale > 70) ? (
+        <>
+        <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,
+            msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+        <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
+            msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+        <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,
+            msTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+        <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,
+            msTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+        </>
+      ) : (
+        <>
+          <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,
+                msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,position:'absolute',width:`${i % 2 == 0 ? 0.3 : 0.15}rem`,height:`100%`,top:0,backgroundColor:'#333443'}}></div>
+          <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
+              msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
+        </>
+      )}
+    </React.Fragment>
+  )), [tickYears, timeScale]);
+
+  const yearTicks = useMemo(() => tickYears.map((i) => (
+    <React.Fragment key={i}>
+      {(timeScale > 100 || (i % 2 == 0 && (timeScale > 40 || i % 4 == 0))) && (
+        <h2 style={{transform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,WebkitTransform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,
+            msTransform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,width:`${timeScale > 100 ? timeScale : (timeScale * 2)}px`,textAlign:'center'}}>
+          {(i + startYear)}
+        </h2>
+      )}
+      {(timeScale > 70) ? (
+        <>
+          <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,
+              msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'1rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+          <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
+              msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.7rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+          <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,
+              msTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+          <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,
+              msTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+        </>
+      ) : (
+        <>
+          <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,
+                msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,position:'absolute',width:`${i % 2 == 0 ? 0.3 : 0.15}rem`,height:`${i % 2 == 0 ? 1 : 0.7}rem`,top:0,backgroundColor:'#E9EAF3'}}></div>
+          <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
+              msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
+        </>
+      )}
+    </React.Fragment>
+  )), [tickYears, timeScale, startYear]);
 
   const getLocX = (event) => {
     if (!event?.location) return null;
@@ -951,7 +1053,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
       </div>
       
       {/* TIMELINE */}
-      <input type='range' value={timeScale} min={30} max={350} onChange={(e) => onTimelineZoom(Number(e.target.value))} className={timelineStyles.timeScale}
+      <input type='range' value={timeScale} min={30} max={350} onChange={(e) => queueZoom(Number(e.target.value))} className={timelineStyles.timeScale}
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`${((timeScale - 30) * 100) / 320}% 100%`,width:`${0.25 * (height - ((height - 64) * borderY))}px`}}/>
       <input type='text' placeholder='Search... &#x1F50D;' onChange={handleSearch} onKeyDown={searchEnter}
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,left:`calc(${width}px - 11.5rem)`}} className={timelineStyles.search}/>
@@ -1079,31 +1181,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
           ))}
 
           {/* VERTICAL LINES */}
-          {[...Array(endYear - startYear + 1)].map((e, i) => (
-            (Math.abs((i * timeScale) - timeX) < width * 2) && (
-              <React.Fragment key={i}>
-                {(timeScale > 70) ? (
-                  <>
-                  <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,
-                      msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-                  <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
-                      msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-                  <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,
-                      msTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-                  <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,
-                      msTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,
-                          msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,position:'absolute',width:`${i % 2 == 0 ? 0.3 : 0.15}rem`,height:`100%`,top:0,backgroundColor:'#333443'}}></div>
-                    <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
-                        msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
-                  </>
-                )}
-              </React.Fragment>
-            )
-          ))}
+          {verticalGridlines}
 
           {/* HORIZONTAL LINES */}
           {[...Array((8 * 2) + 1)].map((e, i) => (
@@ -1129,37 +1207,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
       {/* NUMBER LINE — YEARS */}
       <section className={`${timelineStyles.numberLine} ${utilStyles.scrollable}`} onScroll={onNumberLineScroll} ref={numberLineRef}>
         <div style={{position:'absolute',height:'100%',width:`calc(${timeLimX}px)`,overflow:'hidden'}}>
-          {[...Array(endYear - startYear + 1)].map((e, i) => (
-            (Math.abs((i * timeScale) - timeX) < width * 2) && (
-              <React.Fragment key={i}>
-                {(timeScale > 100 || (i % 2 == 0 && (timeScale > 40 || i % 4 == 0))) && (
-                  <h2 style={{transform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,WebkitTransform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,
-                      msTransform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,width:`${timeScale > 100 ? timeScale : (timeScale * 2)}px`,textAlign:'center'}}>
-                    {(i + startYear)}
-                  </h2>
-                )}
-                {(timeScale > 70) ? (
-                  <>
-                    <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,
-                        msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,position:'absolute',width:'0.3rem',height:'1rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                    <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
-                        msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.7rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                    <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,
-                        msTransform:`translate(calc(${(i * timeScale) + (timeScale / 4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                    <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,
-                        msTransform:`translate(calc(${(i * timeScale) + (timeScale * 3/4)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,
-                          msTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - ${i % 2 == 0 ? 0.15 : 0.075}rem), 0rem)`,position:'absolute',width:`${i % 2 == 0 ? 0.3 : 0.15}rem`,height:`${i % 2 == 0 ? 1 : 0.7}rem`,top:0,backgroundColor:'#E9EAF3'}}></div>
-                    <div style={{transform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,
-                        msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
-                  </>
-                )}
-              </React.Fragment>
-            )
-          ))}
+          {yearTicks}
         </div>
       </section>
 

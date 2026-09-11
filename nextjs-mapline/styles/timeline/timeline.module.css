@@ -92,8 +92,10 @@
     overflow-x: scroll;
 
     z-index: 120;
-    filter: drop-shadow(0 0 0.4rem rgba(0,0,0,0.4));
-    -webkit-filter: drop-shadow(0 0 0.4rem rgba(0,0,0,0.4));
+    /* Was filter: drop-shadow(). A filter on a scrolling container forces the whole
+       scrolled layer to be re-rasterised on every frame - the same reason it was
+       removed from .timeline. box-shadow renders identically on an opaque bar. */
+    box-shadow: 0 0 0.4rem rgba(0,0,0,0.4);
 }
 
 .numberLine h2 {
