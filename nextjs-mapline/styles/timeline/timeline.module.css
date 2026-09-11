@@ -1,4 +1,7 @@
 .timeline {
+    /* This layer scrolls constantly; hint it to the compositor. will-change was
+       previously only on the header underline, which barely moves. */
+    will-change: scroll-position;
     display: flex;
     flex-direction: row;
     -ms-flex-direction: row;
@@ -36,6 +39,12 @@
 }
 .timeScale:focus {
     outline: none;
+}
+/* The rule above removed the ring on one of the few keyboard-reachable controls in the
+   app without putting anything back. */
+.timeScale:focus-visible {
+    outline: 0.15rem solid #E9EAF3;
+    outline-offset: 0.25rem;
 }
 .timeScale::-webkit-slider-thumb {
     appearance: none;
@@ -98,11 +107,15 @@
     box-shadow: 0 0 0.4rem rgba(0,0,0,0.4);
 }
 
-.numberLine h2 {
+.numberLine .tickLabel {
     position: absolute;
     display: inline;
     font-weight: 100;
     font-size: 1.2rem;
+    /* This was an <h2>, whose UA margin-block of 0.83em is what pushed the year clear
+       of the 1rem tick marks above it. A <span> has no such margin, so without this the
+       labels sat at the very top of the bar, on top of the ticks. */
+    margin: 0.83em 0;
     color: #E9EAF3;
 
     -webkit-user-select: none;
@@ -213,7 +226,9 @@
     to {filter: none;}
 }
 
-.events h6 {
+.events .eventTitle {
+    /* <h6> carried a UA default of 0.67em; a span has none, so it is explicit now. */
+    font-size: 0.67em;
     display: inline;
     font-weight: 100;
     white-space: nowrap;
@@ -264,7 +279,7 @@
     position: absolute;
     z-index: 116;
 }
-.eventspLabel h3 {
+.eventspLabel p {
     text-align: center;
     font-size: 12px;
     font-weight: 100;
@@ -323,7 +338,11 @@
     -moz-transform-origin: top left;
 }
 
+/* Now a <button>; it was a bare div with an onClick and no way to reach it. */
 .parentExpand {
+    all: unset;
+    box-sizing: border-box;
+    cursor: pointer;
     position: absolute;
     right: 0;
     top: 50%;
@@ -440,7 +459,7 @@
 .period:hover + .periodText, .selectedPeriod + .periodText {
     z-index: 51;
 }
-.periodText h6, .periodText p {
+.periodText .eventTitle, .periodText p {
     position: relative;
     font-weight: 100;
     display: inline;
@@ -805,4 +824,9 @@
 .selectedEvent {
     z-index: 400;
     border: 0.3rem solid transparent;
+}
+
+.parentExpand:focus-visible {
+    outline: 0.15rem solid #E9EAF3;
+    outline-offset: 0.1rem;
 }

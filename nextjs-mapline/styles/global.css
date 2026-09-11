@@ -1,31 +1,57 @@
+/* woff2 first (238 KB of .ttf became 114 KB), .ttf kept as a fallback.
+ *
+ * font-display: swap matters a lot here — without it the default `block` hides every
+ * one of the ~860 event labels for up to three seconds on a cold load.
+ *
+ * local() stays first deliberately: on macOS the system Futura wins and nothing is
+ * downloaded. Note the two differ in metrics, so measured label widths
+ * (pages/index.tsx, measuredWidths) are not identical across platforms. */
 @font-face {
   font-family: 'Futura';
-  src: local('Futura Medium'), url('../public/futura/futura_medium.ttf') format('truetype');
+  font-display: swap;
+  src: local('Futura Medium'),
+       url('../public/futura/futura_medium.woff2') format('woff2'),
+       url('../public/futura/futura_medium.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Futura';
   font-weight: bold;
-  src: local('Futura Bold'), url('../public/futura/futura_bold.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Futura Light';
-  src: local('Futura Light'), url('../public/futura/futura_light.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Futura Light';
-  font-weight: bold;
-  src: local('Futura Heavy'), url('../public/futura/futura_heavy.ttf') format('truetype');
+  font-display: swap;
+  src: local('Futura Bold'),
+       url('../public/futura/futura_bold.woff2') format('woff2'),
+       url('../public/futura/futura_bold.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Futura';
   font-style: italic;
-  src: local('Futura Medium Italic'), url('../public/futura/futura_medium_italic.ttf') format('truetype');
+  font-display: swap;
+  src: local('Futura Medium Italic'),
+       url('../public/futura/futura_medium_italic.woff2') format('woff2'),
+       url('../public/futura/futura_medium_italic.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Futura';
-  font-weight: bold;
   font-style: italic;
-  src: local('Futura Bold Italic'), url('../public/futura/futura_bold_italic.ttf') format('truetype');
+  font-weight: bold;
+  font-display: swap;
+  src: local('Futura Bold Italic'),
+       url('../public/futura/futura_bold_italic.woff2') format('woff2'),
+       url('../public/futura/futura_bold_italic.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Futura Light';
+  font-display: swap;
+  src: local('Futura Light'),
+       url('../public/futura/futura_light.woff2') format('woff2'),
+       url('../public/futura/futura_light.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Futura Light';
+  font-weight: bold;
+  font-display: swap;
+  src: local('Futura Heavy'),
+       url('../public/futura/futura_heavy.woff2') format('woff2'),
+       url('../public/futura/futura_heavy.ttf') format('truetype');
 }
 
 html,
@@ -35,8 +61,14 @@ body {
   font-family: 'Futura', 'Avenir', 'Century Gothic', 'Gill Sans', 'Avant Garde Gothic', 'Helvetica Neue', 'Proxima Nova', 'Lato', Helvetica, Arial, sans-serif;
   line-height: 1.6;
   font-size: 18px;
+  /* The timeline view manages its own scroll containers and must not scroll the
+     document. Content pages opt back in via .main in components/layout.module.css. */
   overflow: hidden;
   height: 100%;
+  /* Without this the canvas is whatever the browser defaults to - white in light mode -
+     which showed through on the content pages and in the scrollbar gutter. The timeline
+     view paints over it entirely. */
+  background-color: #21222C;
 }
 
 * {
@@ -57,4 +89,22 @@ a:hover {
 img {
   max-width: 100%;
   display: block;
+}
+
+/* Nothing in the app defined a focus ring except two text inputs, and the zoom slider
+   explicitly removed its own. */
+:focus-visible {
+  outline: 0.15rem solid #E9EAF3;
+  outline-offset: 0.15rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

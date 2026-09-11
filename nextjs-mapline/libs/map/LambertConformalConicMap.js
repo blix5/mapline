@@ -35,6 +35,7 @@ const loadGeoJson = (url) => {
       })
       .then((data) => {
         geoResolved.set(url, data);
+        markReady();
         return data;
       })
       .catch((error) => {
@@ -43,6 +44,31 @@ const loadGeoJson = (url) => {
       }));
   }
   return geoRequests.get(url);
+};
+
+// The first paint shows an empty ocean until the medium tier lands (~1.1 MB gzipped,
+// fetched after mount). This lets the page put something on screen in the meantime.
+let firstTierResolved = false;
+const readyListeners = new Set();
+const markReady = () => {
+  if (firstTierResolved) return;
+  firstTierResolved = true;
+  readyListeners.forEach((notify) => notify());
+  readyListeners.clear();
+};
+
+export const useMapDataReady = () => {
+  const [ready, setReady] = useState(firstTierResolved);
+  useEffect(() => {
+    if (firstTierResolved) {
+      setReady(true);
+      return undefined;
+    }
+    const notify = () => setReady(true);
+    readyListeners.add(notify);
+    return () => { readyListeners.delete(notify); };
+  }, []);
+  return ready;
 };
 
 const useGeoJson = (url) => {

@@ -11,6 +11,7 @@
 }
 
 .draggableMapSlow {
+    will-change: transform;
     transition: transform 0.5s ease;
     -webkit-transition: -webkit-transform 0.5s ease;
     -moz-transititon: -moz-transform 0.5s ease;
@@ -21,8 +22,8 @@
     position: absolute;
     top: 0;
     left: 0;
-    zoom: 1;
-    -ms-zoom: 1;
+    /* `zoom: 1` was here on every descendant of the map. It is non-standard, has no
+       effect in any current browser, and applied to hundreds of nodes. */
 }
 
 .map path {

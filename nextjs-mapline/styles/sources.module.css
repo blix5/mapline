@@ -1,0 +1,157 @@
+.intro {
+    color: #E9EAF3;
+    opacity: 0.75;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 0 0 1.5rem 0;
+}
+
+/* The list is constrained to a readable column, so the sticky bar's background stops
+   with the content instead of running to the edge of the screen. It still needs to be
+   opaque - a sticky bar with a transparent background lets the rows scroll through it. */
+.page {
+    max-width: 46rem;
+    padding-top: 2rem;
+}
+
+.controls {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0 0.7rem 0;
+    background-color: #21222C;
+}
+
+.filter {
+    flex: 0 1 22rem;
+    background-color: #242530;
+    border: 0.1rem solid #434559;
+    border-radius: 0.4rem;
+    color: #E9EAF3;
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 0.45rem 0.7rem;
+    outline: none;
+}
+.filter::placeholder {
+    color: #E9EAF3;
+    opacity: 0.4;
+}
+.filter:focus-visible {
+    outline: 0.15rem solid #E9EAF3;
+    outline-offset: 0.15rem;
+}
+
+.count {
+    color: #E9EAF3;
+    opacity: 0.55;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.empty {
+    color: #E9EAF3;
+    opacity: 0.6;
+}
+
+.period {
+    margin: 0 0 2.25rem 0;
+}
+
+.periodHeading {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    font-size: 1.15rem;
+    font-weight: 400;
+    color: #E9EAF3;
+    margin: 0 0 0.6rem 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 0.1rem solid #434559;
+}
+
+.periodRange {
+    font-size: 0.85rem;
+    opacity: 0.5;
+}
+
+.periodCount {
+    margin-left: auto;
+    font-size: 0.8rem;
+    opacity: 0.45;
+}
+
+.list,
+.creditList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.entry {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr auto;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.3rem 0;
+    font-size: 0.9rem;
+    color: #E9EAF3;
+    border-bottom: 0.05rem solid rgba(255, 255, 255, 0.06);
+}
+
+/* The timeline's category colours, stated here rather than borrowed from
+   timeline.module.css: those classes carry the full event-card styling (border, inset
+   band, matching text colour), which is wrong for a small pill. */
+.chip {
+    justify-self: start;
+    font-size: 0.65rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 0.1rem 0.45rem;
+    border-radius: 0.6rem;
+    white-space: nowrap;
+    background-color: #434559;
+    color: #E9EAF3;
+}
+.chip_event { background-color: #F7E38A; color: #A38B31; }
+.chip_legislation { background-color: #98de8e; color: #3E7B2E; }
+.chip_foreign { background-color: #d291e0; color: #75337c; }
+.chip_work { background-color: #72c5b3; color: #42635c; }
+.chip_court { background-color: #e9ba84; color: #8f4e12; }
+.chip_trend { background-color: #9195d1; color: #3f3e63; }
+.chip_ruling { background-color: #d28b8b; color: #853030; }
+
+.name {
+    line-height: 1.45;
+}
+
+.date {
+    opacity: 0.5;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.credits {
+    margin-top: 3rem;
+    max-width: 46rem;
+}
+
+.creditList li {
+    color: #E9EAF3;
+    opacity: 0.7;
+    font-size: 0.9rem;
+    padding: 0.2rem 0;
+}
+
+@media (max-width: 40rem) {
+    .entry {
+        grid-template-columns: 1fr auto;
+    }
+    .chip {
+        grid-column: 1 / -1;
+    }
+}

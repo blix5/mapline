@@ -1,5 +1,4 @@
 import React, { useMemo, useRef, useEffect, useLayoutEffect, useCallback, useState } from 'react';
-import Head from 'next/head';
 import Image from 'next/image';
 import ReactLink from 'next/link';
 
@@ -11,20 +10,20 @@ import Fuse from 'fuse.js';
 
 import Date from '../components/date';
 import useWindowDimensions from '../components/useWindowDimensions';
-import Layout, { siteTitle } from '../components/layout';
+import Layout from '../components/layout';
 
 import utilStyles from '../styles/utils.module.css';
-import indexStyles from '../styles/index.module.css';
 import mapStyles from '../styles/map/map.module.css';
 import infoStyles from '../styles/map/info.module.css';
 import stateStyles from '../styles/map/states.module.css';
 import timelineStyles from '../styles/timeline/timeline.module.css';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 import { getSheetData } from '../libs/sheets';
 
 import State from '../libs/map/State';
 import MapSvg from '../libs/map/MapSvg';
-import { LowProjectionLCC, LowTopProjectionLCC, MediumProjectionLCC, MediumTopProjectionLCC, MediumTopLabelProjectionLCC, MediumTopRiverLabelProjectionLCC, HighTopLabelProjectionLCC, latLonToX, latLonToY } from '../libs/map/LambertConformalConicMap';
+import { useMapDataReady, LowProjectionLCC, LowTopProjectionLCC, MediumProjectionLCC, MediumTopProjectionLCC, MediumTopLabelProjectionLCC, MediumTopRiverLabelProjectionLCC, HighTopLabelProjectionLCC, latLonToX, latLonToY } from '../libs/map/LambertConformalConicMap';
 import FilterIcon from '../libs/FilterIcon';
 import Icon from '../libs/Icon';
 
@@ -69,6 +68,25 @@ const URL_STATE_DEFAULTS = {
   year: 1776.5,
 };
 
+// Card opacity from importance. The old mapping (importance / 9 + 0.4) bottomed out at
+// 0.51, and compositing a card over the timeline background at 0.51 dropped even the
+// reworked palette to ~3.2:1 — below AA. A 0.80 floor keeps the worst pairing at 5.88:1.
+// Keep this to a small set of discrete values: styled-components mints a stylesheet rule
+// per distinct interpolation result (see libs/HoverVisibleDiv.tsx).
+// Clicking an event fires two simultaneous 500ms smooth scrolls across the whole
+// viewport, which is exactly the kind of motion that triggers vestibular symptoms.
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const scrollOptions = (horizontal) => ({
+  containerId: 'timeline',
+  horizontal,
+  smooth: !prefersReducedMotion(),
+  duration: prefersReducedMotion() ? 0 : 500,
+});
+
 // Width of an event box from its measured label, never narrower than the date column.
 // Mirrors the original inline expression, but returns the floor (instead of NaN) when
 // the element has not been measured yet.
@@ -83,6 +101,10 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
   const [inHidden, setInHidden] = useState(-1);
   const { width, height } = useWindowDimensions();
+  // Until the map's first data tier lands the page is an empty blue rectangle, so hold a
+  // cover over it. `width` gates too: it is undefined on the first render.
+  const mapDataReady = useMapDataReady();
+  const appReady = mapDataReady && !!width;
   const [borderY, setBorderY] = useState(URL_STATE_DEFAULTS.div);
 
   const [mapX, setMapX] = useState(URL_STATE_DEFAULTS.mpx);
@@ -288,7 +310,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
         const newTime = (timeScale * (decimalYear - startYear + 0.5)) - (width / 2);
         setTimeX(newTime);
         setScrolling(true);
-        scroll.scrollTo(newTime, { smooth: true, containerId: 'timeline', duration: 500, horizontal: true });
+        scroll.scrollTo(newTime, scrollOptions(true));
       }
       e.target.value = '';
       e.target.blur();
@@ -626,6 +648,54 @@ export default function Home({ states, locations, events, onCompleted, onError }
   // Only the events inside the horizontal viewport are handed to React. The map used to
   // run over all of them and return `false` for the ones off-screen, so React still
   // reconciled an entry per event on every frame.
+  // Events in chronological order, for arrow-key traversal.
+  const eventsByTime = useMemo(() => {
+    const order = events
+      .map((event, index) => ({ event, index, meta: eventMeta.byIndex[index] }))
+      .filter((entry) => entry.event && entry.meta);
+    order.sort((a, b) => a.meta.start - b.meta.start);
+    return order;
+  }, [events, eventMeta]);
+
+  const [keyCursor, setKeyCursor] = useState(-1);
+
+  const moveKeyCursor = useCallback((delta) => {
+    if (!eventsByTime.length) return;
+    setKeyCursor((current) => {
+      const next = current < 0
+        // Start from whatever is nearest the middle of the viewport.
+        ? eventsByTime.findIndex((entry) => xFromMeta(entry.meta) >= timeX)
+        : current + delta;
+      const clamped = Math.min(Math.max(next < 0 ? 0 : next, 0), eventsByTime.length - 1);
+      const target = eventsByTime[clamped];
+      if (target && timelineRef.current) {
+        timelineRef.current.scrollLeft = xFromMeta(target.meta) - (width / 2);
+        timelineRef.current.scrollTop = Math.max(getEventY(target.event) - 120, 0);
+      }
+      return clamped;
+    });
+  }, [eventsByTime, xFromMeta, timeX, width]);
+
+  const onTimelineKeyDown = useCallback((e) => {
+    if (e.target !== e.currentTarget) return;   // let inputs and buttons keep their keys
+    switch (e.key) {
+      case 'ArrowRight': e.preventDefault(); moveKeyCursor(1); break;
+      case 'ArrowLeft': e.preventDefault(); moveKeyCursor(-1); break;
+      case 'Home': e.preventDefault(); setKeyCursor(0); if (timelineRef.current) timelineRef.current.scrollLeft = 0; break;
+      case 'Enter':
+      case ' ': {
+        if (keyCursor < 0 || !eventsByTime[keyCursor]) return;
+        e.preventDefault();
+        eventClick(eventsByTime[keyCursor].event);
+        break;
+      }
+      case 'Escape': setKeyCursor(-1); break;
+      default: break;
+    }
+  }, [moveKeyCursor, keyCursor, eventsByTime]);
+
+  const keyCursorId = keyCursor >= 0 ? eventsByTime[keyCursor]?.event?.id : null;
+
   const visibleTimelineEvents = useMemo(() => {
     const left = timeX;
     const right = timeX + (width * 1.1);
@@ -680,10 +750,10 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const yearTicks = useMemo(() => tickYears.map((i) => (
     <React.Fragment key={i}>
       {(timeScale > 100 || (i % 2 == 0 && (timeScale > 40 || i % 4 == 0))) && (
-        <h2 style={{transform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,WebkitTransform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,
+        <span className={timelineStyles.tickLabel} style={{transform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,WebkitTransform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,
             msTransform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,width:`${timeScale > 100 ? timeScale : (timeScale * 2)}px`,textAlign:'center'}}>
           {(i + startYear)}
-        </h2>
+        </span>
       )}
       {(timeScale > 70) ? (
         <>
@@ -737,8 +807,8 @@ export default function Home({ states, locations, events, onCompleted, onError }
       const clickX = getEventX(event);
       const clickY = getEventY(event) - ((height - ((height - 64) * borderY) - 200) / 2);
 
-      scroll.scrollTo(clickX - width / 2, { smooth: true, containerId: 'timeline', duration: 500, horizontal: true });
-      scroll.scrollTo(clickY, { smooth: true, containerId: 'timeline', duration: 500, horizontal: false })
+      scroll.scrollTo(clickX - width / 2, scrollOptions(true));
+      scroll.scrollTo(clickY, scrollOptions(false))
       setEventSelected(event.id);
 
       if(event?.location) {
@@ -814,15 +884,17 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
   return (
     <Layout page="history">
-      <Head>
-        <title>{siteTitle}</title>
-      </Head>
+      {/* The document had no h1 at all: the highest heading was a map state label. */}
+      <h1 className={utilStyles.srOnly}>
+        Mapline — a map and timeline of United States history
+      </h1>
+      <LoadingOverlay visible={!appReady} label="Loading map data" />
 
       {/* MAP */}
 
       <section id={`map`} className={mapStyles.map} onWheel={onMapScroll} style={{height:`${(height - 64) * borderY}px`}}>
         <svg width={'10rem'} height={'100%'} style={{background:`linear-gradient(90deg, rgba(0,0,0,0.8), transparent)`,zIndex:109}}></svg>
-        <Image className={mapStyles.compass} src="/images/compass.png" height={256} width={256} alt="compass" style={{height:`${compassDimensions(height, borderY)}px`,width:`${compassDimensions(height, borderY)}px`,
+        <Image className={mapStyles.compass} src="/images/compass.png" height={256} width={256} alt="" style={{height:`${compassDimensions(height, borderY)}px`,width:`${compassDimensions(height, borderY)}px`,
             top:`calc(${((height - 64) * borderY)}px - ${compassDimensions(height, borderY)}px - 1.2rem)`}}/>
         <DraggableCore onDrag={(e, data) => {onMapDrag(data)}} onStart={() => setIsDragging(true)} onStop={() => setIsDragging(false)}>
           <div onMouseMove={onMapMouseMove} style={{position:"absolute",width:"100%",height:"100%",zIndex:100,transform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,WebkitTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,
@@ -878,10 +950,10 @@ export default function Home({ states, locations, events, onCompleted, onError }
                     />
                     <div style={{left:Number(state.x) + Number(state.xLabel), top:Number(state.y) + Number(state.yLabel), width:Number(state.width) + 5, height:Number(state.height) + 5,
                         fontSize: 6 * Math.pow((2/3) * Number(state.width) + (1/3) * Number(state.height), 0.3)}}>
-                      <h2 className={`${stateStyles.state} ${stateStyles.stateLabel} ${(stateDates[index].statehood > timeYear) && stateStyles.nonStateLabel}`}
-                            style={{transformOrigin:`center center`,transform:`scale(${0.4 / mapScale + 0.3})`,opacity: `${(inHidden == index || locSel == state.id) ? 0.6 : 0}`}}>
+                      <span className={`${stateStyles.state} ${stateStyles.stateLabel} ${(stateDates[index].statehood > timeYear) && stateStyles.nonStateLabel}`}
+                            style={{transformOrigin:`center center`,transform:`scale(${0.4 / mapScale + 0.3})`,opacity: `${(inHidden == index || locSel == state.id) ? 0.85 : 0}`}}>
                         {state.displayName + ((stateDates[index].statehood > timeYear) ? ' Territory' : '')}
-                      </h2>
+                      </span>
                     </div>
                   </>
                 }
@@ -893,7 +965,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
               <React.Fragment key={location.id ?? index}>
                 <div style={{transformOrigin:`top left`,transform:`scale(${(location.size / 10 + 0.3) / mapScale + 0.1})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:115,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
                   <div className={`${mapStyles.locationDot}`} style={{opacity:(locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) || locSel == location.id) ? 1 : (0.3 + (location.size / 10))}}></div>
-                  <h3 className={`${mapStyles.locationLabel} ${(!locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) && locSel != location.id) && mapStyles.locationLabelHidden}`}>{location.displayName}</h3>
+                  <span className={`${mapStyles.locationLabel} ${(!locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) && locSel != location.id) && mapStyles.locationLabelHidden}`}>{location.displayName}</span>
                 </div>
               </React.Fragment>
             ))}
@@ -927,9 +999,9 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
                     {/* LOCATION COUNT */}
                     <div className={timelineStyles.eventspLabel} style={{}}>
-                      <h3>
+                      <p aria-hidden="true">
                         {eventsAtLocLen(event)}
-                      </h3>
+                      </p>
                     </div>
 
                     {/* EVENT LIST AT LOC */}
@@ -952,9 +1024,9 @@ export default function Home({ states, locations, events, onCompleted, onError }
                                   }}
                               >
                                 <div className={timelineStyles.eventDiv} style={{overflow:'hidden',width:'100%',height:'100%'}}>
-                                  <h6 ref={el => setRef(eventsPinRef, el, j)} style={{marginTop:4,fontStyle:`${eInList.italics ? 'italic' : 'normal'}`}}>
+                                  <span className={timelineStyles.eventTitle} ref={el => setRef(eventsPinRef, el, j)} style={{marginTop:4,fontStyle:`${eInList.italics ? 'italic' : 'normal'}`}}>
                                     {eInList.displayName}
-                                  </h6>
+                                  </span>
                                   <div style={{position:'absolute',width:'100%',height:'1rem',top:'1rem',textAlign:'right'}}>
                                     {eInList?.endDate && (
                                       <p style={{position:'relative'}}>
@@ -988,53 +1060,69 @@ export default function Home({ states, locations, events, onCompleted, onError }
             <div className={`${infoStyles.infoBoxDiv}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}>
 
               <div className={`${infoStyles.infoBoxTabs}`}>
-                {eventsOpen.map((eOpen, i) => (
-                  <div key={eOpen ?? i} className={`${infoStyles.infoBoxTab} ${timelineStyles[eventFromId(eOpen).category + 'Tab']} ${eventOpenSelected == eOpen && infoStyles.infoBoxTabSel}`} onClick={() => setEventOpenSelected(eOpen)}>
-                    <p style={{fontStyle:`${eventFromId(eOpen).italics ? 'italic' : 'normal'}`}}>
-                      {eventFromId(eOpen).displayName}
-                    </p>
-                    <MapSvg name={'close'} onCompleted={onCompleted} onError={onError} width={'1rem'} height={'1rem'} className={`${infoStyles.infoBoxClose}`} onClick={(e) => {
-                      e.stopPropagation();
-                      const index = eventsOpen.indexOf(eOpen);
-                      if(eOpen == eventOpenSelected) {
-                        setEventOpenSelected(eventsOpen[index + 1] || eventsOpen[index - 1]);
-                      }
-                      if(eOpen == eventSelected) {
-                        setEventSelected(null);
-                        setLocSel(null);
-                      }
-                      setEventsOpen(prevEvents => prevEvents.filter(event => event != eOpen));
-                    }}/>
+                {eventsOpen.map((eOpen, i) => {
+                  const tabEvent = eventFromId(eOpen);
+                  if (!tabEvent) return null;
+                  const selected = eventOpenSelected == eOpen;
+                  return (
+                  <div key={eOpen ?? i} className={`${infoStyles.infoBoxTab} ${timelineStyles[tabEvent.category + 'Tab']} ${selected ? infoStyles.infoBoxTabSel : ''}`}>
+                    <button type="button" className={infoStyles.infoBoxTabButton}
+                        aria-current={selected ? 'true' : undefined}
+                        onClick={() => setEventOpenSelected(eOpen)}>
+                      <span style={{fontStyle:`${tabEvent.italics ? 'italic' : 'normal'}`}}>
+                        {tabEvent.displayName}
+                      </span>
+                    </button>
+                    <button type="button" className={infoStyles.infoBoxClose}
+                        aria-label={`Close ${tabEvent.displayName}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const index = eventsOpen.indexOf(eOpen);
+                          if(eOpen == eventOpenSelected) {
+                            setEventOpenSelected(eventsOpen[index + 1] || eventsOpen[index - 1]);
+                          }
+                          if(eOpen == eventSelected) {
+                            setEventSelected(null);
+                            setLocSel(null);
+                          }
+                          setEventsOpen(prevEvents => prevEvents.filter(event => event != eOpen));
+                        }}>
+                      <MapSvg name={'close'} onCompleted={onCompleted} onError={onError} width={'1rem'} height={'1rem'} aria-hidden="true" />
+                    </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className={`${infoStyles.infoBoxDivInner} ${utilStyles.scrollable}`}>
-                <h1 className={`${timelineStyles[eventFromId(eventOpenSelected).category + 'Text']}`} style={{fontStyle:`${eventFromId(eventOpenSelected).italics ? 'italic' : 'normal'}`}}>
+                <h2 className={`${infoStyles.infoBoxTitle} ${timelineStyles[eventFromId(eventOpenSelected).category + 'Text']}`} style={{fontStyle:`${eventFromId(eventOpenSelected).italics ? 'italic' : 'normal'}`}}>
                   {eventFromId(eventOpenSelected)?.fullName || eventFromId(eventOpenSelected)?.displayName}
                   {(eventFromId(eventOpenSelected)?.aka) && (
-                    <h3>
+                    <span className={infoStyles.infoBoxAka}>
                       A.K.A. {eventFromId(eventOpenSelected).aka}
-                    </h3>
+                    </span>
                   )}
-                </h1>
+                </h2>
                 
-                <h2 className={`${timelineStyles[eventFromId(eventOpenSelected).category + 'Text']}`} onClick={() => eventClick(eventFromId(eventOpenSelected))}>
+                <p className={`${infoStyles.infoBoxDate} ${timelineStyles[eventFromId(eventOpenSelected).category + 'Text']}`} onClick={() => eventClick(eventFromId(eventOpenSelected))}>
                   {convertDate(String(dateFilterRender(eventFromId(eventOpenSelected)?.startDate, eventFromId(eventOpenSelected)?.specStartDate)))}
                   {eventFromId(eventOpenSelected)?.endDate && 
                     ` – ${convertDate(String(dateFilterRender(eventFromId(eventOpenSelected)?.endDate, eventFromId(eventOpenSelected)?.specEndDate)))}`
                   }
-                </h2>
+                </p>
                 {(eventFromId(eventOpenSelected)?.location) && (
-                  <h4 onClick={() => locationClick(eventFromId(eventOpenSelected).location)}>
+                  <button type="button" className={infoStyles.infoBoxLocation}
+                      onClick={() => locationClick(eventFromId(eventOpenSelected).location)}>
                     {isListedAsLoc(eventFromId(eventOpenSelected).location) && getLocation(eventFromId(eventOpenSelected).location)?.displayName}
                     {isListedAsState(eventFromId(eventOpenSelected).location) && (getCurrentState(eventFromId(eventOpenSelected).location)?.displayName || oopsieDaisies(eventFromId(eventOpenSelected).location)?.displayName)}
-                    <MapSvg width={11} name={'pin'} onCompleted={onCompleted} onError={onError}/>
-                  </h4>
+                    <MapSvg width={11} name={'pin'} onCompleted={onCompleted} onError={onError} aria-hidden="true" />
+                  </button>
                 )}
 
                 <UrlToAbstract url={eventFromId(eventOpenSelected).wikiLink} className={infoStyles.infoBoxInfo} />
-                <a target='_blank' href={eventFromId(eventOpenSelected).wikiLink}>Wikipedia</a>
+                <a target='_blank' rel='noopener noreferrer' href={eventFromId(eventOpenSelected).wikiLink}>
+                  Wikipedia<span className={utilStyles.srOnly}> article for {eventFromId(eventOpenSelected).displayName}</span>
+                </a>
               </div>
 
             </div>
@@ -1054,8 +1142,9 @@ export default function Home({ states, locations, events, onCompleted, onError }
       
       {/* TIMELINE */}
       <input type='range' value={timeScale} min={30} max={350} onChange={(e) => queueZoom(Number(e.target.value))} className={timelineStyles.timeScale}
+          aria-label='Timeline zoom' aria-valuetext={`${timeScale} pixels per year`}
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,backgroundSize:`${((timeScale - 30) * 100) / 320}% 100%`,width:`${0.25 * (height - ((height - 64) * borderY))}px`}}/>
-      <input type='text' placeholder='Search... &#x1F50D;' onChange={handleSearch} onKeyDown={searchEnter}
+      <input type='search' placeholder='Search... &#x1F50D;' aria-label='Search events' onChange={handleSearch} onKeyDown={searchEnter}
           style={{top:`calc(${(height - 64) * borderY}px + 4rem)`,left:`calc(${width}px - 11.5rem)`}} className={timelineStyles.search}/>
       {(searchMatches != null && searchMatches != undefined && searchMatches.length > 0) && (
         <div style={{position:'absolute',width:'100%',left:`calc(${width}px - 11.5rem)`,height:`calc(${Math.min(searchMatches.length * 43 - 5, height - ((height - 64) * borderY) - 210)}px)`,
@@ -1074,9 +1163,9 @@ export default function Home({ states, locations, events, onCompleted, onError }
                   }}
               >
                 <div className={timelineStyles.eventDiv} style={{overflow:'hidden',width:'100%',height:'100%'}}>
-                  <h6 ref={el => searchResultsRef.current[j] = el} style={{marginTop:4,fontStyle:`${eInList.italics ? 'italic' : 'normal'}`}}>
+                  <span className={timelineStyles.eventTitle} ref={el => searchResultsRef.current[j] = el} style={{marginTop:4,fontStyle:`${eInList.italics ? 'italic' : 'normal'}`}}>
                     {eInList.displayName}
-                  </h6>
+                  </span>
                   <div style={{position:'absolute',width:'100%',height:'1rem',top:'1rem',textAlign:'right'}}>
                     {eInList?.endDate && (
                       <p style={{position:'relative'}}>
@@ -1095,6 +1184,8 @@ export default function Home({ states, locations, events, onCompleted, onError }
         </div>
       )}
       <section id={`timeline`} className={`${timelineStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
+          tabIndex={0} role="region" aria-label="Timeline of events. Use the arrow keys to move between events and Enter to open one."
+          onKeyDown={onTimelineKeyDown}
           style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,position:'absolute'}}>
         <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`,overflow:'hidden'}} onMouseUpCapture={() => {if(!isDragging) { eventClick(null); setLocSel(null); }}}>
           {visibleTimelineEvents.map(({ event, index: i }) => (
@@ -1104,16 +1195,16 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
                   <HoverVisibleDiv $length={labelWidth(measuredWidths.current.events[i], event?.endDate)} $opacity={(event.importance / 9) + 0.4} 
                         $isParent={isListedAsParent(event.id)} $expanded={(event?.parent ? (isParentSelected(event.parent)) : true)} $corners={event?.endDate} $isChild={event?.parent} 
-                        $isParentExpanded={isParentSelected(event.id)} $isSelected={eventSelected == event.id} id={event.id} onClick={(e) => eventClick(event)}
+                        $isParentExpanded={isParentSelected(event.id)} $isSelected={eventSelected == event.id || keyCursorId === event.id} id={event.id} onClick={(e) => eventClick(event)}
                         style={{marginTop:`${event?.parent ? (isParentSelected(event.parent) ? 0 : -0.5) : 0}rem`,
                             transform:`translate(calc(${getEventX(event)}px), calc(${getEventY(event)}px + 0.1rem))`,
                             WebkitTransform:`translate(calc(${getEventX(event)}px), calc(${getEventY(event)}px + 0.1rem))`,
                             msTransform:`translate(calc(${getEventX(event)}px), calc(${getEventY(event)}px + 0.1rem))`}}
                         className={`${timelineStyles.events} ${timelineStyles[event.category]} ${event?.parent && timelineStyles.childEvent} ${event.id == eventSelected && timelineStyles.selectedEvent}`}>
                     <div style={{overflow:'hidden',height:'2rem'}}>
-                      <h6 ref={el => setRef(eventsRef, el, i)} style={{fontStyle:`${event.italics ? 'italic' : 'normal'}`}}>
+                      <span className={timelineStyles.eventTitle} ref={el => setRef(eventsRef, el, i)} style={{fontStyle:`${event.italics ? 'italic' : 'normal'}`}}>
                         {event.displayName}
-                      </h6>
+                      </span>
                       <div style={{width:`calc(100% - ${isListedAsParent(event.id) ? 1 : 0}rem)`,height:'2rem',overflow:'hidden',right:`${isListedAsParent(event.id) ? 1 : 0}rem`,position:'absolute'}}>
                         {event?.endDate && (
                           <p className={timelineStyles.endDate}>
@@ -1134,12 +1225,15 @@ export default function Home({ states, locations, events, onCompleted, onError }
                       </div>
                     )}
                     {(isListedAsParent(event.id)) && (
-                      <div style={{}} className={`${timelineStyles.parentExpand} ${timelineStyles[event.category + 'e']}`} onClick={(e) => {e.stopPropagation();toggleParentSelection(event.id)}}>
+                      <button type="button" className={`${timelineStyles.parentExpand} ${timelineStyles[event.category + 'e']}`}
+                          aria-expanded={isParentSelected(event.id)}
+                          aria-label={`${isParentSelected(event.id) ? 'Collapse' : 'Expand'} events under ${event.displayName}`}
+                          onClick={(e) => {e.stopPropagation();toggleParentSelection(event.id)}}>
                         <Icon className={`${timelineStyles.arrow} ${timelineStyles[event.category + 'Arrow']}`} icon={"arrow"} onCompleted={onCompleted} onError={onError}
                             style={{transform:`rotate(${isParentSelected(event.id) ? 0 : 180}deg)`,WebkitTransform:`rotate(${isParentSelected(event.id) ? 0 : 180}deg)`,
                               msTransform:`rotate(${isParentSelected(event.id) ? 0 : 180}deg)`}}>
                         </Icon>
-                      </div>
+                      </button>
                     )}
                   </HoverVisibleDiv>
 
@@ -1167,9 +1261,9 @@ export default function Home({ states, locations, events, onCompleted, onError }
                   <div className={`${timelineStyles.periodText} ${timelineStyles[event.category + 'Period']}`} style={{backgroundColor:'transparent',
                         transform:`translate(calc(${(Math.max(getEventX(event), timeX) + Math.min(getEventXEnd(event), timeX + width)) / 2}px - 50%), calc(${getEventY(event)}px + 0.05rem))`}}>
                     <FilterIcon className={timelineStyles.filterIconPeriod} filter={event.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
-                      <h6 style={{fontStyle:`${event.italics ? 'italic' : 'normal'}`}}>
+                      <span className={timelineStyles.eventTitle} style={{fontStyle:`${event.italics ? 'italic' : 'normal'}`}}>
                         {event.displayName}
-                      </h6>
+                      </span>
                       <p>
                         ({dateFilterRender(event.startDate, event.specStartDate)} – {dateFilterRender(event.endDate, event.specEndDate)})
                       </p>
@@ -1216,7 +1310,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
         <div style={{height:height - ((height - 64) * borderY),opacity:`${scrolling ? 1 : 0.5}`,transition:`opacity ${scrolling ? 0.1 : 1}s`,WebkitTransition:`opacity ${scrolling ? 0.1 : 1}s`,msTransition:`opacity ${scrolling ? 0.1 : 1}s`}}
             className={`${timelineStyles.markerLine}`}></div>
         <div style={{opacity:`${scrolling ? 1 : 0.5}`,transition:`opacity ${scrolling ? 0.1 : 1}s`,WebkitTransition:`opacity ${scrolling ? 0.1 : 1}s`,msTransition:`opacity ${scrolling ? 0.1 : 1}s`}} className={timelineStyles.marker}></div>
-        <input type='text' maxLength={10} placeholder={convertDecimalYearToDate(timeYear)} style={{opacity:`${scrolling ? 1 : 0.5}`,width:'7.5rem',transition:`opacity ${scrolling ? 0.1 : 1}s`,WebkitTransition:`opacity ${scrolling ? 0.1 : 1}s`,
+        <input type='text' maxLength={10} aria-label='Jump to a year or date' placeholder={convertDecimalYearToDate(timeYear)} style={{opacity:`${scrolling ? 1 : 0.5}`,width:'7.5rem',transition:`opacity ${scrolling ? 0.1 : 1}s`,WebkitTransition:`opacity ${scrolling ? 0.1 : 1}s`,
             msTransition:`opacity ${scrolling ? 0.1 : 1}s`}} onKeyDown={yearInput}/>
       </div>
     </Layout>

@@ -1,0 +1,55 @@
+.aboutPage {
+    padding-top: 2rem;
+}
+
+.lede {
+    max-width: 42rem;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: #E9EAF3;
+    opacity: 0.85;
+    margin: 0 0 2rem 0;
+}
+
+.section {
+    max-width: 42rem;
+    margin: 0 0 2.25rem 0;
+    color: #E9EAF3;
+}
+
+.section p {
+    line-height: 1.7;
+    opacity: 0.75;
+    margin: 0 0 0.75rem 0;
+}
+
+.heading {
+    font-size: 1.15rem;
+    font-weight: 400;
+    margin: 0 0 0.6rem 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 0.1rem solid #434559;
+}
+
+.keys {
+    margin: 0;
+}
+
+.keys dt {
+    font-weight: bold;
+    margin-top: 0.9rem;
+    font-size: 0.95rem;
+}
+
+.keys dd {
+    margin: 0.15rem 0 0 0;
+    opacity: 0.75;
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+.note {
+    opacity: 0.5 !important;
+    font-size: 0.9rem;
+    font-style: italic;
+}

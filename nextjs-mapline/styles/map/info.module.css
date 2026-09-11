@@ -36,7 +36,7 @@
 .infoBoxDivInner::-webkit-scrollbar-track {
     margin-bottom: 1rem;
 }
-.infoBoxDiv h1 {
+.infoBoxDiv .infoBoxTitle {
     font-weight: bolder;
     font-family: 'Baskerville', Georgia, Garamond, Times, 'Cambria', 'Times New Roman', serif;
     font-size: 1.7rem;
@@ -44,7 +44,7 @@
     margin: 0rem 0rem 0.5rem 0rem;
     padding: 0.4rem 0rem 0.4rem 1rem;
 }
-.infoBoxDiv h2 {
+.infoBoxDiv .infoBoxDate {
     display: inline-block;
     font-size: 0.9rem;
     font-weight: 100;
@@ -52,11 +52,14 @@
     margin: 0rem 1rem 0rem 1rem;
     background: none;
 }
-.infoBoxDiv h2:hover {
+.infoBoxDiv .infoBoxDate:hover {
     cursor: pointer;
     color: white;
 }
-.infoBoxDiv h3 {
+.infoBoxDiv .infoBoxAka {
+    /* Was an <h3> nested inside the <h1>, which is invalid; it is a span now, so it
+       needs to be told to behave like a block. */
+    display: block;
     font-family: 'Futura', 'Avenir', 'Century Gothic', 'Gill Sans', 'Avant Garde Gothic', 'Helvetica Neue', 'Proxima Nova', 'Lato', Helvetica, Arial, sans-serif;
     font-style: italic;
     font-weight: 100;
@@ -66,25 +69,30 @@
     line-height: 120%;
     margin: 0.5rem 0 0.3rem 0;
 }
-.infoBoxDiv h4 {
+.infoBoxDiv .infoBoxLocation {
+    all: unset;
+    box-sizing: border-box;
+    display: block;
+    cursor: pointer;
     font-size: 0.8rem;
     letter-spacing: 0.02rem;
     font-style: italic;
     font-weight: 100;
-    color: gray;
+    /* was `gray` at 4.32:1 - and this element is clickable */
+    color: #B9BFD6;
     line-height: 150%;
     margin: 0.2rem 1rem 0rem 1rem;
 }
-.infoBoxDiv h4 svg {
+.infoBoxDiv .infoBoxLocation svg {
     display: inline;
     margin-left: 0.3rem;
     margin-bottom: -0.1rem;
     fill: gray;
 }
-.infoBoxDiv h4:hover svg {
+.infoBoxDiv .infoBoxLocation:hover svg {
     fill: white;
 }
-.infoBoxDiv h4:hover {
+.infoBoxDiv .infoBoxLocation:hover {
     color: white;
     cursor: pointer;
 }
@@ -128,7 +136,25 @@
 
     transition: background-color 0.3s ease, color 0.3s ease, width 0.3s ease;
 }
-.infoBoxTab p {
+/* The tab label is a <button> now; strip the UA chrome and let it fill the tab. */
+.infoBoxTabButton {
+    all: unset;
+    display: block;
+    width: 100%;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.infoBoxTabButton:focus-visible {
+    outline: 0.15rem solid #E9EAF3;
+    outline-offset: -0.15rem;
+    border-radius: 0.4rem;
+}
+
+.infoBoxTab p,
+.infoBoxTab .infoBoxTabButton span {
     margin-top: 0rem;
     mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) calc(100% - 1rem), rgba(0, 0, 0, 0));
     -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) calc(100% - 1rem), rgba(0, 0, 0, 0));
@@ -141,13 +167,19 @@
     -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) calc(100% - 2rem), rgba(0, 0, 0, 0) calc(100% - 1rem));
 }
 .infoBoxClose {
+    all: unset;
+    box-sizing: border-box;
+    cursor: pointer;
+    display: block;
     position: absolute;
     left: calc(100% - 1.5rem);
+    top: 50%;
+    transform: translateY(-50%);
     opacity: 0;
     pointer-events: none;
     border-radius: 100%;
     transition: opacity 0.3s ease;
-    margin: 0.2rem 0.2rem 0.2rem 0.2rem;
+    margin: 0;
 }
 .infoBoxTab:hover .infoBoxClose {
     opacity: 1;
@@ -155,4 +187,10 @@
 }
 .infoBoxTabSel {
     background-color: rgba(255,255,255,0.2);
+}
+
+.infoBoxDate:focus-visible,
+.infoBoxLocation:focus-visible {
+    outline: 0.15rem solid #E9EAF3;
+    outline-offset: 0.1rem;
 }

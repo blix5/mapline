@@ -22,7 +22,7 @@
 }
 
 .nonState {
-    fill: #9aa3ca;
+    fill: #9AA3CA;
 }
 .nonState:hover, .nonStateHover {
     fill: #aab2d4;
@@ -39,7 +39,7 @@
     justify-content: center;
     align-items: center;
     line-height: 1;
-    color: #8C91B5;
+    color: #2B2E42;
     font-weight: 100;
     letter-spacing: 0rem;
     text-transform: uppercase;
@@ -60,7 +60,7 @@
 }
 
 .nonStateLabel {
-    color: #8084a9;
+    color: #25283A;
     -webkit-text-stroke: .15rem #aab2d4;
 }
 
