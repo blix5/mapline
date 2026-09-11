@@ -1,0 +1,134 @@
+/* Mirrors styles/sources.module.css box-for-box. Every dimension here was measured off
+   the rendered page rather than derived from the stylesheet, because box-sizing is
+   border-box globally and line-height rounding moves real text boxes a pixel or two
+   away from the arithmetic.
+
+   Structure mirrors the real one too: an outer element carrying .main's page padding
+   (layout.module.css) and an inner one carrying .page's column width, rather than one
+   element trying to do both - with border-box, folding the padding into the 46rem
+   column would narrow the content by 6rem. */
+
+.main {
+    padding: 0 3rem 4rem 3rem;
+}
+
+.page {
+    max-width: 46rem;
+    padding-top: 2rem;
+}
+
+/* .headingXl: 2rem / 1.25. */
+.heading {
+    height: 2.5rem;
+    width: 9rem;
+    margin: 0 0 0.5rem 0;
+}
+
+/* .intro renders as three lines of 0.95rem / 1.6 - the lines are butted rather than
+   gapped so the block occupies the same 3 x 1.52rem as the real paragraph. */
+.intro {
+    margin: 0 0 1.5rem 0;
+}
+/* The block occupies a full 1.52rem line box but paints only its content box, so
+   consecutive lines read as text rather than as one solid slab. */
+.introLine {
+    height: 1.52rem;
+    padding: 0.28rem 0;
+    background-clip: content-box;
+    border-radius: 0.3rem;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0 0.7rem 0;
+}
+.filter {
+    flex: 0 1 22rem;
+    height: 2.26rem;
+    border-radius: 0.4rem;
+}
+.count {
+    width: 5rem;
+    height: 0.85rem;
+}
+
+.period {
+    margin: 0 0 2.25rem 0;
+}
+
+/* Same padding-bottom and border as .periodHeading, so its rule lands on the same line. */
+.periodHeading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: 2.32rem;
+    margin: 0 0 0.6rem 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 0.1rem solid #434559;
+}
+.periodLabel {
+    width: 6rem;
+    height: 1.15rem;
+}
+.periodRange {
+    width: 4.5rem;
+    height: 0.85rem;
+}
+.periodCount {
+    margin-left: auto;
+    width: 1.5rem;
+    height: 0.8rem;
+}
+
+.list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Same grid, padding and border as .entry. */
+.entry {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.3rem 0;
+    height: 1.39rem;
+    box-sizing: content-box;
+    border-bottom: 0.05rem solid rgba(255, 255, 255, 0.06);
+}
+.chip {
+    justify-self: start;
+    width: 4.2rem;
+    height: 0.95rem;
+    border-radius: 0.6rem;
+}
+.name {
+    height: 0.9rem;
+}
+.date {
+    width: 3.5rem;
+    height: 0.8rem;
+}
+
+/* Below 40rem the real .entry drops to two columns and the chip takes its own row, so
+   rows become two lines tall. The page padding does NOT change - layout.module.css keeps
+   3rem at every width - so .main is left alone here. */
+@media (max-width: 40rem) {
+    .entry {
+        grid-template-columns: 1fr auto;
+        height: auto;
+    }
+    .chip {
+        grid-column: 1 / -1;
+        height: 1.24rem;
+    }
+    .name,
+    .date {
+        height: 1.31rem;
+        padding: 0.2rem 0;
+        background-clip: content-box;
+    }
+}

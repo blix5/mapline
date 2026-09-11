@@ -1,0 +1,51 @@
+/* Shared primitives for the route-transition and in-page skeletons that replaced the
+   old full-screen LoadingOverlay. The tokens here are the ones already established
+   elsewhere: #21222C page ground (global.css), #333443 as the "not-yet-content" fill
+   (it was the progress bar's track), #434559 for dividers (sources/timeline modules). */
+
+/* The route-transition skeleton covers the outgoing page, but stops below the header:
+   the header is identical on every route, so covering it would hide chrome that never
+   actually changes. 4rem matches .header in layout.module.css. */
+.overlay {
+    position: fixed;
+    top: 4rem;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 500;
+    overflow: hidden;
+    background-color: #21222C;
+    /* As in the overlay this replaces: showing is instant, only hiding fades, so the
+       skeleton never reads as arriving late. */
+}
+
+.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+/* A text-shaped or box-shaped placeholder. Callers set width/height to match the real
+   element's box so the swap to real content does not move anything. */
+.block {
+    background-color: #333443;
+    border-radius: 0.3rem;
+    animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+/* Close to .barFill's old 1.1s cadence without matching it exactly - many small blocks
+   pulsing in unison reads slower than one sliding bar, so it is given a little more room. */
+@keyframes skeletonPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.9; }
+}
+
+/* global.css already flattens all animations under reduced motion, but loading.module.css
+   set an explicit override too rather than relying on the blanket rule. Same here. */
+@media (prefers-reduced-motion: reduce) {
+    .block {
+        animation: none;
+        opacity: 0.7;
+    }
+}

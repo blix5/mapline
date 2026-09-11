@@ -1,0 +1,58 @@
+/* Shaped to about.module.css: a 42rem column, 1.15rem section headings with a #434559
+   rule under them, and 1.7 line-height body copy.
+
+   Same two-element structure as the sources skeleton, and for the same reason: with
+   border-box, folding .main's padding into the column width would narrow the content. */
+
+.main {
+    padding: 0 3rem 4rem 3rem;
+}
+
+.page {
+    padding-top: 2rem;
+}
+
+/* .headingXl: 2rem / 1.25. */
+.heading {
+    height: 2.5rem;
+    width: 60%;
+    max-width: 24rem;
+    margin: 0 0 0.5rem 0;
+}
+
+/* .lede: 1.05rem / 1.7, 2rem bottom margin. */
+.lede {
+    max-width: 42rem;
+    margin: 0 0 2rem 0;
+}
+.ledeLine {
+    height: 1.785rem;
+    padding: 0.4rem 0;
+    background-clip: content-box;
+}
+
+.section {
+    max-width: 42rem;
+    margin: 0 0 2.25rem 0;
+}
+
+/* .heading in about.module.css: 1.15rem, 0.4rem padding-bottom, 0.1rem rule, 0.6rem
+   bottom margin. The rule is drawn as its own element so the block above it can pulse
+   without the divider pulsing too. */
+.sectionHeading {
+    height: 1.823rem;
+    width: 11rem;
+    margin: 0 0 0.4rem 0;
+}
+.sectionRule {
+    height: 0.1rem;
+    background-color: #434559;
+    margin: 0 0 0.6rem 0;
+}
+
+/* .section p: 1rem / 1.7, 0.75rem bottom margin. */
+.bodyLine {
+    height: 1.7rem;
+    padding: 0.4rem 0;
+    background-clip: content-box;
+}

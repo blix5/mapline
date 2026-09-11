@@ -1,0 +1,31 @@
+/* The timeline's own gridlines and lane lines already render unconditionally from
+   synchronous props, so the real page never needs this. It exists for the route
+   transition, when Home has not mounted yet and there is nothing to draw them.
+
+   Spacings mirror the real values in pages/index.tsx: vertical gridlines at the default
+   timeScale of 100px per year with quarter-year subdivisions, #333443; horizontal lane
+   lines every 65px, #76768B, every other one brighter. */
+.grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        /* lane lines */
+        repeating-linear-gradient(to bottom, rgba(118, 118, 139, 0.5) 0 2px, transparent 2px 130px),
+        repeating-linear-gradient(to bottom, rgba(118, 118, 139, 0.15) 0 2px, transparent 2px 65px),
+        /* year gridlines */
+        repeating-linear-gradient(to right, #333443 0 3px, transparent 3px 100px),
+        repeating-linear-gradient(to right, rgba(51, 52, 67, 0.7) 0 2px, transparent 2px 25px);
+}
+
+/* The number line along the top of the real timeline, so the axis is not missing during
+   the transition. Matches .numberLine's #434559 in timeline.module.css. */
+.axis {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1.6rem;
+    background-color: #434559;
+    opacity: 0.6;
+}

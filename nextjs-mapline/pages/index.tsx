@@ -17,7 +17,7 @@ import mapStyles from '../styles/map/map.module.css';
 import infoStyles from '../styles/map/info.module.css';
 import stateStyles from '../styles/map/states.module.css';
 import timelineStyles from '../styles/timeline/timeline.module.css';
-import LoadingOverlay from '../components/LoadingOverlay';
+import MapGridSkeleton from '../components/skeletons/MapGridSkeleton';
 
 import { getSheetData } from '../libs/sheets';
 
@@ -101,10 +101,10 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
   const [inHidden, setInHidden] = useState(-1);
   const { width, height } = useWindowDimensions();
-  // Until the map's first data tier lands the page is an empty blue rectangle, so hold a
-  // cover over it. `width` gates too: it is undefined on the first render.
+  // Until the map's first data tier lands the map pane is an empty blue rectangle, so a
+  // grid stands in for it. The rest of the page renders immediately: the timeline's data
+  // comes from getStaticProps and has nothing to wait for.
   const mapDataReady = useMapDataReady();
-  const appReady = mapDataReady && !!width;
   const [borderY, setBorderY] = useState(URL_STATE_DEFAULTS.div);
 
   const [mapX, setMapX] = useState(URL_STATE_DEFAULTS.mpx);
@@ -888,14 +888,13 @@ export default function Home({ states, locations, events, onCompleted, onError }
       <h1 className={utilStyles.srOnly}>
         Mapline — a map and timeline of United States history
       </h1>
-      <LoadingOverlay visible={!appReady} label="Loading map data" />
-
       {/* MAP */}
 
       <section id={`map`} className={mapStyles.map} onWheel={onMapScroll} style={{height:`${(height - 64) * borderY}px`}}>
         <svg width={'10rem'} height={'100%'} style={{background:`linear-gradient(90deg, rgba(0,0,0,0.8), transparent)`,zIndex:109}}></svg>
         <Image className={mapStyles.compass} src="/images/compass.png" height={256} width={256} alt="" style={{height:`${compassDimensions(height, borderY)}px`,width:`${compassDimensions(height, borderY)}px`,
             top:`calc(${((height - 64) * borderY)}px - ${compassDimensions(height, borderY)}px - 1.2rem)`}}/>
+        <MapGridSkeleton hidden={mapDataReady} />
         <DraggableCore onDrag={(e, data) => {onMapDrag(data)}} onStart={() => setIsDragging(true)} onStop={() => setIsDragging(false)}>
           <div onMouseMove={onMapMouseMove} style={{position:"absolute",width:"100%",height:"100%",zIndex:100,transform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,WebkitTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,
               msTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,transformOrigin:"top left",WebkitTransformOrigin:"top left",msTransformOrigin:"top left"}}
