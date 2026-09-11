@@ -1,4 +1,3 @@
-import ReactDOM from "react-dom";
 import React, { useState, useEffect } from "react";
 
 const convertToApiUrl = (wikiUrl) => {
@@ -7,34 +6,56 @@ const convertToApiUrl = (wikiUrl) => {
   return `https://en.wikipedia.org/w/api.php?action=query&origin=*&prop=extracts&format=json&exintro=&titles=${encodedTitle}`;
 };
 
+// Abstracts never change within a session, so re-opening a tab should not refetch.
+const abstractCache = new Map();
+
+const extractAPIContents = (json) => {
+  const pages = json?.query?.pages ?? {};
+  return Object.keys(pages).map((id) => pages[id].extract).filter(Boolean);
+};
+
 export default function UrlToAbstract({ url, ...rest }) {
-  const [contents, setContents] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [contents, setContents] = useState(() => abstractCache.get(url) ?? []);
+  const [loading, setLoading] = useState(() => !!url && !abstractCache.has(url));
   const [error, setError] = useState();
 
-  const extractAPIContents = (json) => {
-    const { pages } = json.query;
-    return Object.keys(pages).map(id => pages[id].extract);
-  };
-
-  const getContents = async () => {
-    let resp;
-    let contents = [];
-    setLoading(true);
-    try {
-      resp = await fetch(convertToApiUrl(url));
-      const json = await resp.json();
-      contents = extractAPIContents(json);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-    setContents(contents);
-  };
-
   useEffect(() => {
-    getContents();
+    // Events without a wikiLink used to throw here, taking the info panel with them.
+    if (!url) {
+      setContents([]);
+      setLoading(false);
+      setError(undefined);
+      return undefined;
+    }
+
+    if (abstractCache.has(url)) {
+      setContents(abstractCache.get(url));
+      setLoading(false);
+      setError(undefined);
+      return undefined;
+    }
+
+    // Without this, switching tabs quickly could let a slower earlier response
+    // overwrite the abstract for the tab you are actually looking at.
+    const controller = new AbortController();
+    setLoading(true);
+    setError(undefined);
+
+    fetch(convertToApiUrl(url), { signal: controller.signal })
+      .then((response) => response.json())
+      .then((json) => {
+        const extracted = extractAPIContents(json);
+        abstractCache.set(url, extracted);
+        setContents(extracted);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
+        setError(err);
+        setLoading(false);
+      });
+
+    return () => controller.abort();
   }, [url]);
 
   if (loading) return <p {...rest}>...</p>;

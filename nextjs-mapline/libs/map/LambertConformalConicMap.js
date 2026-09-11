@@ -1,36 +1,68 @@
-import React, { useRef, useMemo, useEffect } from 'react';
+import React, { useRef, useMemo, useEffect, useState } from 'react';
 import * as d3 from 'd3';
 
 import mapStyles from '../../styles/map/map.module.css';
-const simplify = require('simplify-geojson');
 
-import lowLandDataSrc from '../../public/map/geojson/low/land_low.geojson';
-import mediumLandDataSrc from '../../public/map/geojson/medium/land_medium.geojson';
-import lowLakeDataSrc from '../../public/map/geojson/low/lakes_low.geojson';
-import mediumLakeDataSrc from '../../public/map/geojson/medium/lakes_medium.geojson';
-import lowRiverDataSrc from '../../public/map/geojson/low/rivers_low.geojson';
-import mediumRiverDataSrc from '../../public/map/geojson/medium/rivers_medium.geojson';
-import mediumLabelDataSrc from '../../public/map/geojson/medium/labels_medium.geojson';
-import highLabelDataSrc from '../../public/map/geojson/high/labels_high.geojson';
-import mediumMarineLabelDataSrc from '../../public/map/geojson/medium/marine_labels_medium.geojson';
-import highMarineLabelDataSrc from '../../public/map/geojson/high/marine_labels_high.geojson';
+// These ten datasets used to be `import`ed, which meant json-loader inlined ~28.6 MB of
+// JSON into the page chunk, and the six geometry sets were then run through Douglas-Peucker
+// synchronously at module scope — on the main thread, before React mounted. The simplified
+// files are now precomputed by scripts/prepare-geojson.mjs and fetched per zoom tier.
+const GEO = {
+  lowLand: '/map/geojson/simplified/land_low.json',
+  lowLake: '/map/geojson/simplified/lakes_low.json',
+  lowRiver: '/map/geojson/simplified/rivers_low.json',
+  mediumLand: '/map/geojson/simplified/land_medium.json',
+  mediumLake: '/map/geojson/simplified/lakes_medium.json',
+  mediumRiver: '/map/geojson/simplified/rivers_medium.json',
+  mediumLabel: '/map/geojson/medium/labels_medium.geojson',
+  mediumMarineLabel: '/map/geojson/medium/marine_labels_medium.geojson',
+  highLabel: '/map/geojson/high/labels_high.geojson',
+  highMarineLabel: '/map/geojson/high/marine_labels_high.geojson',
+};
 
-const simplifyData = (data, tolerance) => simplify(data, tolerance);
+// One in-flight promise and one resolved value per URL, shared by every component
+// instance, so crossing a zoom threshold repeatedly never refetches or reparses.
+const geoRequests = new Map();
+const geoResolved = new Map();
 
-const lowLandData = simplifyData(lowLandDataSrc, 0.04);
-const mediumLandData = simplifyData(mediumLandDataSrc, 0.02);
+const loadGeoJson = (url) => {
+  if (geoResolved.has(url)) return Promise.resolve(geoResolved.get(url));
+  if (!geoRequests.has(url)) {
+    geoRequests.set(url, fetch(url)
+      .then((response) => {
+        if (!response.ok) throw new Error(`${url}: ${response.status}`);
+        return response.json();
+      })
+      .then((data) => {
+        geoResolved.set(url, data);
+        return data;
+      })
+      .catch((error) => {
+        geoRequests.delete(url);
+        throw error;
+      }));
+  }
+  return geoRequests.get(url);
+};
 
-const lowLakeData = simplifyData(lowLakeDataSrc, 0.04);
-const mediumLakeData = simplifyData(mediumLakeDataSrc, 0.02);
+const useGeoJson = (url) => {
+  const [data, setData] = useState(() => geoResolved.get(url) ?? null);
 
-const lowRiverData = simplifyData(lowRiverDataSrc, 0.04)
-const mediumRiverData = simplifyData(mediumRiverDataSrc, 0.02);
+  useEffect(() => {
+    if (geoResolved.has(url)) {
+      setData(geoResolved.get(url));
+      return undefined;
+    }
+    let cancelled = false;
+    loadGeoJson(url).then(
+      (result) => { if (!cancelled) setData(result); },
+      (error) => { console.error('Failed to load map data', error); },
+    );
+    return () => { cancelled = true; };
+  }, [url]);
 
-const mediumLabelData = mediumLabelDataSrc;
-const highLabelData = highLabelDataSrc;
-
-const mediumMarineLabelData = mediumMarineLabelDataSrc;
-const highMarineLabelData = highMarineLabelDataSrc;
+  return data;
+};
 
 const rotation = 95.65;
 
@@ -99,8 +131,11 @@ export const LowProjectionLCC = ({ width, height, ...rest }) => {
   const svgRef = useRef(null);
   const projection = useProjection();
   const path = usePath(projection);
+  const lowLandData = useGeoJson(GEO.lowLand);
+  const lowLakeData = useGeoJson(GEO.lowLake);
 
   useEffect(() => {
+    if (!lowLandData || !lowLakeData) return undefined;
     const updateMap = () => {
       const svg = d3.select(svgRef.current);
       svg.selectAll("*").remove();
@@ -111,7 +146,7 @@ export const LowProjectionLCC = ({ width, height, ...rest }) => {
 
     const handle = requestAnimationFrame(updateMap);
     return () => cancelAnimationFrame(handle);
-  }, [path]);
+  }, [path, lowLandData, lowLakeData]);
 
   return <svg ref={svgRef} width={width} height={height} {...rest}></svg>;
 };
@@ -120,8 +155,10 @@ export const LowTopProjectionLCC = ({ width, height, ...rest }) => {
   const svgRef = useRef(null);
   const projection = useProjection();
   const path = usePath(projection);
+  const lowRiverData = useGeoJson(GEO.lowRiver);
 
   useEffect(() => {
+    if (!lowRiverData) return undefined;
     const updateMap = () => {
       const svg = d3.select(svgRef.current);
       svg.selectAll("*").remove();
@@ -131,7 +168,7 @@ export const LowTopProjectionLCC = ({ width, height, ...rest }) => {
 
     const handle = requestAnimationFrame(updateMap);
     return () => cancelAnimationFrame(handle);
-  }, [path]);
+  }, [path, lowRiverData]);
 
   return <svg ref={svgRef} width={width} height={height} {...rest}></svg>;
 };
@@ -140,8 +177,11 @@ export const MediumProjectionLCC = ({ width, height, ...rest }) => {
   const svgRef = useRef(null);
   const projection = useProjection();
   const path = usePath(projection);
+  const mediumLandData = useGeoJson(GEO.mediumLand);
+  const mediumLakeData = useGeoJson(GEO.mediumLake);
 
   useEffect(() => {
+    if (!mediumLandData || !mediumLakeData) return undefined;
     const updateMap = () => {
       const svg = d3.select(svgRef.current);
       svg.selectAll("*").remove();
@@ -152,7 +192,7 @@ export const MediumProjectionLCC = ({ width, height, ...rest }) => {
 
     const handle = requestAnimationFrame(updateMap);
     return () => cancelAnimationFrame(handle);
-  }, [path]);
+  }, [path, mediumLandData, mediumLakeData]);
 
   return <svg ref={svgRef} width={width} height={height} {...rest}></svg>;
 };
@@ -161,8 +201,11 @@ export const MediumTopProjectionLCC = ({ width, height, ...rest }) => {
   const svgRef = useRef(null);
   const projection = useProjection();
   const path = usePath(projection);
+  const mediumRiverData = useGeoJson(GEO.mediumRiver);
+  const mediumLakeData = useGeoJson(GEO.mediumLake);
 
   useEffect(() => {
+    if (!mediumRiverData || !mediumLakeData) return undefined;
     const updateMap = () => {
       const svg = d3.select(svgRef.current);
       svg.selectAll("*").remove();
@@ -174,7 +217,7 @@ export const MediumTopProjectionLCC = ({ width, height, ...rest }) => {
 
     const handle = requestAnimationFrame(updateMap);
     return () => cancelAnimationFrame(handle);
-  }, [path]);
+  }, [path, mediumRiverData, mediumLakeData]);
 
   return <svg ref={svgRef} width={width} height={height} {...rest}></svg>;
 };
@@ -182,8 +225,11 @@ export const MediumTopProjectionLCC = ({ width, height, ...rest }) => {
 export const MediumTopLabelProjectionLCC = ({ width, height, ...rest }) => {
   const svgRef = useRef(null);
   const projection = useProjection();
+  const mediumMarineLabelData = useGeoJson(GEO.mediumMarineLabel);
+  const mediumLabelData = useGeoJson(GEO.mediumLabel);
 
   useEffect(() => {
+    if (!mediumMarineLabelData || !mediumLabelData) return undefined;
     const updateMap = () => {
       const svg = d3.select(svgRef.current);
       svg.selectAll("*").remove();
@@ -194,7 +240,7 @@ export const MediumTopLabelProjectionLCC = ({ width, height, ...rest }) => {
 
     const handle = requestAnimationFrame(updateMap);
     return () => cancelAnimationFrame(handle);
-  }, [projection]);
+  }, [projection, mediumMarineLabelData, mediumLabelData]);
 
   return <svg ref={svgRef} width={width} height={height} {...rest}></svg>;
 };
@@ -202,8 +248,10 @@ export const MediumTopLabelProjectionLCC = ({ width, height, ...rest }) => {
 export const MediumTopRiverLabelProjectionLCC = ({ width, height, ...rest }) => {
   const svgRef = useRef(null);
   const projection = useProjection();
+  const mediumRiverData = useGeoJson(GEO.mediumRiver);
 
   useEffect(() => {
+    if (!mediumRiverData) return undefined;
     const updateMap = () => {
       const svg = d3.select(svgRef.current);
       svg.selectAll("*").remove();
@@ -213,7 +261,7 @@ export const MediumTopRiverLabelProjectionLCC = ({ width, height, ...rest }) => 
 
     const handle = requestAnimationFrame(updateMap);
     return () => cancelAnimationFrame(handle);
-  }, [projection]);
+  }, [projection, mediumRiverData]);
 
   return <svg ref={svgRef} width={width} height={height} {...rest}></svg>;
 };
@@ -222,8 +270,12 @@ export const HighTopLabelProjectionLCC = ({ width, height, ...rest }) => {
   const svgRef = useRef(null);
   const projection = useProjection();
   const path = usePath(projection);
+  // 12.2 MB between them - only requested once the user actually zooms in this far.
+  const highMarineLabelData = useGeoJson(GEO.highMarineLabel);
+  const highLabelData = useGeoJson(GEO.highLabel);
 
   useEffect(() => {
+    if (!highMarineLabelData || !highLabelData) return undefined;
     const updateMap = () => {
       const svg = d3.select(svgRef.current);
       svg.selectAll("*").remove();
@@ -234,22 +286,18 @@ export const HighTopLabelProjectionLCC = ({ width, height, ...rest }) => {
 
     const handle = requestAnimationFrame(updateMap);
     return () => cancelAnimationFrame(handle);
-  }, [path, projection]);
+  }, [path, projection, highMarineLabelData, highLabelData]);
 
   return <svg ref={svgRef} width={width} height={height} {...rest}></svg>;
 };
 
-export const latLonToX = (lat, lon) => {
-  const projection = getProjection();
-  const [x] = projection([lon, lat]);
-  return x - 2800;
-};
+// Shared instance: these were building a whole new d3.geoConicConformal per call, and
+// they are called six times per location per render.
+const sharedProjection = getProjection();
 
-export const latLonToY = (lat, lon) => {
-  const projection = getProjection();
-  const [, y] = projection([lon, lat]);
-  return y - 3100;
-};
+export const latLonToX = (lat, lon) => sharedProjection([lon, lat])[0] - 2800;
+
+export const latLonToY = (lat, lon) => sharedProjection([lon, lat])[1] - 3100;
 
 /*const LambertConformalConicMapExport = ({ width, height, ...rest }) => {
   const svgRef = useRef(null);

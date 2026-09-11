@@ -12,8 +12,7 @@
     overflow-y: scroll;
     touch-action: none;
 
-    filter: drop-shadow(0 0 0.5rem rgba(0,0,0,0.5));
-    -webkit-filter: drop-shadow(0 0 0.5rem rgba(0,0,0,0.5));
+    box-shadow: 0 0 0.5rem rgba(0,0,0,0.5);
     z-index: 110;
 }
 
@@ -184,13 +183,9 @@
     line-height: 70%;
 
     transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
-        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, background-color 0.3s ease-out;
-    -moz-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
-        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, background-color 0.3s ease-out;
-    -ms-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
-        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, background-color 0.3s ease-out;
+        margin 0.5s ease-out, filter 0.3s ease-out, background-color 0.3s ease-out;
     -webkit-transition: border 0.3s ease-out, box-shadow 0.3s ease-out, color 0.3s ease-out, width 0.5s ease-out, border-radius 0.5s ease-out, opacity 0.3s ease-out,
-        pointer-events 0.3s ease-out, margin 0.5s ease-out, filter 0.3s ease-out, background-color 0.3s ease-out;
+        margin 0.5s ease-out, filter 0.3s ease-out, background-color 0.3s ease-out;
 }
 .eventDiv:hover .eventsl, .selectedEvent .eventsl {
     opacity: 0.6;

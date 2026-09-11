@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mapline-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "nextjs-mapline", "run", "dev"],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "mapline-prod",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "nextjs-mapline", "run", "start"],
+      "port": 3001,
+      "autoPort": true
+    }
+  ]
+}

@@ -1,10 +1,10 @@
-import React, { useMemo, useRef, useEffect, useCallback, useState } from 'react';
+import React, { useMemo, useRef, useEffect, useLayoutEffect, useCallback, useState } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import ReactLink from 'next/link';
 
 import Draggable, {DraggableCore} from 'react-draggable';
-import { parseAsFloat, useQueryState } from 'next-usequerystate';
+import debounce from 'lodash.debounce';
 import styled from 'styled-components';
 import { Link, Button, Element, Events, animateScroll as scroll, scrollSpy } from 'react-scroll';
 import Fuse from 'fuse.js';
@@ -20,7 +20,7 @@ import infoStyles from '../styles/map/info.module.css';
 import stateStyles from '../styles/map/states.module.css';
 import timelineStyles from '../styles/timeline/timeline.module.css';
 
-import { getStateList, getLocations, getTimeline } from '../libs/sheets';
+import { getSheetData } from '../libs/sheets';
 
 import State from '../libs/map/State';
 import MapSvg from '../libs/map/MapSvg';
@@ -36,33 +36,46 @@ import { dateFilterRender, convertDate } from '../libs/dateFilterRender';
 import UrlToAbstract from '../libs/wikipediaAbstract';
 
 import compassDimensions from '../libs/map/mapUtils';
-import { p } from 'next-usequerystate/dist/serializer-C_l8WgvO';
 
 export async function getStaticProps(context) {
-  const states = await getStateList();
-  const events = await getTimeline();
-  const locations = await getLocations();
+  // One batchGet for all three tabs, instead of three sequential requests each
+  // preceded by its own OAuth handshake.
+  const { states, events, locations } = await getSheetData();
   return {
     props: {
-      states: states.slice(1, states.length),
-      locations: locations.slice(1, locations.length),
-      events: events.slice(1, events.length)
+      // slice(1) drops each tab's header row.
+      states: states.slice(1),
+      locations: locations.slice(1),
+      events: events.slice(1),
     },
-    revalidate: 1,
+    // Was 1, which made the page stale after a second and turned almost every request
+    // into a background regeneration (and another round of Sheets calls).
+    revalidate: 300,
   };
 }
 
-const isEvenIndexInCategory = (event, events) => {
-  const categoryEvents = events.filter(e => e.category === event.category && (e?.parent === event?.parent));
-  const eventIndex = categoryEvents.findIndex(e => e.id === event.id);
-  return eventIndex % 2 === 0;
-};
-const remainderQuadIndexPeriod = (event, events) => {
-  const periodEvents = events.filter(e => e.period);
-  const periodIndex = periodEvents.findIndex(e => e.id == event.id);
-  return periodIndex % 4;
-}
+// useLayoutEffect warns during SSR; fall back to useEffect on the server.
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
+// Keys mirrored into the query string, and the defaults used before restore.
+const URL_STATE_DEFAULTS = {
+  div: 0.6,
+  mpx: -1450,
+  mpy: -275,
+  mps: 1,
+  tpx: 0,
+  tpy: 0,
+  tps: 100,
+  year: 1776.5,
+};
+
+// Width of an event box from its measured label, never narrower than the date column.
+// Mirrors the original inline expression, but returns the floor (instead of NaN) when
+// the element has not been measured yet.
+const labelWidth = (measured, hasEndDate) => {
+  const floor = 130 + (hasEndDate ? 70 : 0);
+  return (!measured || measured < floor) ? (floor - 1) : (measured - 0.01);
+};
 
 export default function Home({ states, locations, events, onCompleted, onError }) {
   const startYear = 1480;
@@ -70,16 +83,28 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
   const [inHidden, setInHidden] = useState(-1);
   const { width, height } = useWindowDimensions();
-  const [borderY, setBorderY] = useQueryState('div', parseAsFloat.withDefault(0.6));
+  const [borderY, setBorderY] = useState(URL_STATE_DEFAULTS.div);
 
-  const [mapX, setMapX] = useQueryState('mpx', parseAsFloat.withDefault(-1450));
-  const [mapY, setMapY] = useQueryState('mpy', parseAsFloat.withDefault(-275));
-  const [mapScale, setMapScale] = useQueryState('mps', parseAsFloat.withDefault(1));
+  const [mapX, setMapX] = useState(URL_STATE_DEFAULTS.mpx);
+  const [mapY, setMapY] = useState(URL_STATE_DEFAULTS.mpy);
+  const [mapScale, setMapScale] = useState(URL_STATE_DEFAULTS.mps);
   const [isDragging, setIsDragging] = useState(false);
   const [mousePos, setMousePos] = useState({ x: null, y: null });
-
-  const [originalMousePos, setOriginalMousePos] = useState({ x: null, y: null });
-  const [originalMapPos, setOriginalMapPos] = useState({ x: null, y: null });
+  // Un-throttled, this fired setState on every mousemove and re-rendered the timeline too.
+  const mouseFrame = useRef(null);
+  const pendingMouse = useRef(null);
+  const onMapMouseMove = useCallback((e) => {
+    pendingMouse.current = { x: e.clientX, y: e.clientY };
+    if (mouseFrame.current === null) {
+      mouseFrame.current = requestAnimationFrame(() => {
+        mouseFrame.current = null;
+        setMousePos(pendingMouse.current);
+      });
+    }
+  }, []);
+  useEffect(() => () => {
+    if (mouseFrame.current !== null) cancelAnimationFrame(mouseFrame.current);
+  }, []);
 
   const tempMousePos = useRef({x: 0, y: 0});
   const mapMouseDown = (e) => {
@@ -93,10 +118,10 @@ export default function Home({ states, locations, events, onCompleted, onError }
     }
   }
 
-  const [timeX, setTimeX] = useQueryState('tpx', parseAsFloat.withDefault(0));
-  const [timeY, setTimeY] = useQueryState('tpy', parseAsFloat.withDefault(0));
-  const [timeScale, setTimeScale] = useQueryState('tps', parseAsFloat.withDefault(100));
-  const [timeYear, setTimeYear] = useQueryState('year', parseAsFloat.withDefault(1776.5));
+  const [timeX, setTimeX] = useState(URL_STATE_DEFAULTS.tpx);
+  const [timeY, setTimeY] = useState(URL_STATE_DEFAULTS.tpy);
+  const [timeScale, setTimeScale] = useState(URL_STATE_DEFAULTS.tps);
+  const [timeYear, setTimeYear] = useState(URL_STATE_DEFAULTS.year);
 
   const mapLimX = 2400;
   const mapLimY = 1280;
@@ -110,7 +135,59 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const eventsPinRef = useRef<Array<HTMLDivElement | null>>([]);
   const eventsPinDivRef = useRef<Array<HTMLDivElement | null>>([]);
 
-  const [refsUpdated, setRefsUpdated] = useState(false);
+  // Interaction state lives in React state; the query string is mirrored from it on a
+  // debounce, so scrolling no longer writes to history on every frame. Restoring runs
+  // after mount rather than in the useState initialisers so SSR hydration still matches.
+  const urlRestored = useRef(false);
+  const pendingScrollRestore = useRef(null);
+  const syncUrl = useMemo(() => debounce((next) => {
+    const params = new URLSearchParams(window.location.search);
+    Object.keys(next).forEach((key) => {
+      const value = next[key];
+      if (value == null || !Number.isFinite(value)) return;
+      params.set(key, String(Math.round(value * 1000) / 1000));
+    });
+    // replaceState, not push: the back button should not collect a frame of scrolling.
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+  }, 300), []);
+  useEffect(() => () => syncUrl.cancel(), [syncUrl]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const read = (key) => {
+      const raw = params.get(key);
+      if (raw === null) return null;
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+    const setters = { div: setBorderY, mpx: setMapX, mpy: setMapY, mps: setMapScale,
+                      tpx: setTimeX, tpy: setTimeY, tps: setTimeScale, year: setTimeYear };
+    Object.keys(setters).forEach((key) => {
+      const value = read(key);
+      if (value !== null) setters[key](value);
+    });
+    pendingScrollRestore.current = { x: read('tpx') ?? URL_STATE_DEFAULTS.tpx, y: read('tpy') ?? URL_STATE_DEFAULTS.tpy };
+    urlRestored.current = true;
+  }, []);
+
+  // Scroll containers are restored once, from the URL, rather than being written back
+  // on every timeX change (which fed the scroll handler its own output).
+  useEffect(() => {
+    const target = pendingScrollRestore.current;
+    if (!target || !width || !timelineRef.current || !numberLineRef.current) return;
+    pendingScrollRestore.current = null;
+    timelineRef.current.scrollLeft = target.x;
+    timelineRef.current.scrollTop = target.y;
+    numberLineRef.current.scrollLeft = target.x;
+  });
+
+
+  // Mirror interaction state into the URL once scrolling settles.
+  useEffect(() => {
+    if (!urlRestored.current) return;
+    syncUrl({ div: borderY, mpx: mapX, mpy: mapY, mps: mapScale,
+              tpx: timeX, tpy: timeY, tps: timeScale, year: timeYear });
+  }, [syncUrl, borderY, mapX, mapY, mapScale, timeX, timeY, timeScale, timeYear]);
 
   const [eventSelected, setEventSelected] = useState(null);
   const [eventsOpen, setEventsOpen] = useState([]);
@@ -156,8 +233,6 @@ export default function Home({ states, locations, events, onCompleted, onError }
     }
   }, [eventSelected]);
   useEffect(() => {
-  }, [events.length]);
-  useEffect(() => {
     eventsRef.current = eventsRef.current.slice(0, events.length);
     eventsPinRef.current = eventsPinRef.current.slice(0, events.length);
     eventsPinDivRef.current = eventsPinDivRef.current.slice(0, events.length);
@@ -174,15 +249,36 @@ export default function Home({ states, locations, events, onCompleted, onError }
     return { searchResultsRef, widths };
   };
   const { searchResultsRef, widths } = useMeasure(searchMatches);
-  useEffect(() => {
-    if (refsUpdated) {
-      setRefsUpdated(false);
+  // Label widths are measured after layout into a ref; the version counter only
+  // re-renders when a measurement actually changed, so this settles in a pass or two.
+  // Previously setRef called setState, and because the ref callbacks are inline arrows
+  // React re-attached them on every commit — which re-fired the state update forever.
+  const measuredWidths = useRef({ events: [], pins: [], pinDivs: [] });
+  const [, bumpWidthVersion] = useState(0);
+  useIsomorphicLayoutEffect(() => {
+    const measure = (key, refArray) => {
+      const store = measuredWidths.current[key];
+      let changed = false;
+      for (let i = 0; i < refArray.current.length; i += 1) {
+        const el = refArray.current[i];
+        const next = el ? el.offsetWidth : 0;
+        if (store[i] !== next) {
+          store[i] = next;
+          changed = true;
+        }
+      }
+      return changed;
+    };
+    const eventsChanged = measure('events', eventsRef);
+    const pinsChanged = measure('pins', eventsPinRef);
+    const pinDivsChanged = measure('pinDivs', eventsPinDivRef);
+    if (eventsChanged || pinsChanged || pinDivsChanged) {
+      bumpWidthVersion((version) => version + 1);
     }
-  }, [refsUpdated]);
-  const setRef = (refArray, el, i) => {
+  });
+  const setRef = useCallback((refArray, el, i) => {
     refArray.current[i] = el;
-    setRefsUpdated(true);
-  };
+  }, []);
 
   const yearInput = (e) => {
     if (e.key === 'Enter') {
@@ -214,29 +310,158 @@ export default function Home({ states, locations, events, onCompleted, onError }
       )
     );
   }
+  // ---- Derived data -------------------------------------------------------------
+  // Everything here is a function of the sheet data and is recomputed only when that
+  // data changes. It used to be redone per event, per render: getEventY ran a full
+  // events.filter() + findIndex() for every event, each position re-parsed its date
+  // strings, and every state/location lookup was a linear scan.
+
+  const statesById = useMemo(() => {
+    const map = new Map();
+    states.forEach((state) => {
+      if (!state) return;
+      if (!map.has(state.id)) map.set(state.id, []);
+      map.get(state.id).push({
+        ...state,
+        decimalStart: convertDateToDecimal(state.startDate),
+        decimalEnd: convertDateToDecimal(state.endDate),
+        decimalState: convertDateToDecimal(state.stateDate),
+      });
+    });
+    return map;
+  }, [states]);
+
+  const locationsById = useMemo(() => {
+    const map = new Map();
+    locations.forEach((location) => { if (location) map.set(location.id, location); });
+    return map;
+  }, [locations]);
+
+  // latLonToX/Y are pure, so project each location once instead of six times per render.
+  const locationPoints = useMemo(() => {
+    const map = new Map();
+    locations.forEach((location) => {
+      if (!location) return;
+      map.set(location.id, {
+        x: latLonToX(Number(location.lat), Number(location.long)),
+        y: latLonToY(Number(location.lat), Number(location.long)),
+      });
+    });
+    return map;
+  }, [locations]);
+
+  const eventsById = useMemo(() => {
+    const map = new Map();
+    events.forEach((event) => { if (event && !map.has(event.id)) map.set(event.id, event); });
+    return map;
+  }, [events]);
+
+  // Decimal dates and the vertical lane for every event, in one pass.
+  const eventMeta = useMemo(() => {
+    const byIndex = [];
+    const byId = new Map();
+    const categoryCursor = new Map();
+    let periodCursor = 0;
+
+    events.forEach((event, index) => {
+      if (!event) { byIndex.push(null); return; }
+      const start = convertDateToDecimal(event.startDate);
+      const end = event?.endDate ? convertDateToDecimal(event.endDate) : null;
+
+      // The old isEvenIndexInCategory indexed into events.filter(category && parent),
+      // which includes period events — so they take up slots in the alternation even
+      // though they are laid out separately. Nested Maps keep '' and null distinct as
+      // parent values, matching the original's strict equality.
+      let parentCursor = categoryCursor.get(event.category);
+      if (!parentCursor) {
+        parentCursor = new Map();
+        categoryCursor.set(event.category, parentCursor);
+      }
+      const seen = parentCursor.get(event.parent) ?? 0;
+      parentCursor.set(event.parent, seen + 1);
+
+      let y;
+      if (event.period) {
+        y = (periodCursor % 4) * (65 / 2);
+        periodCursor += 1;
+      } else {
+        y = (categoryToIndex(event.category) * 65 * 2) + (seen % 2 === 0 ? 0 : 65);
+      }
+
+      const meta = { start, end, y, index };
+      byIndex.push(meta);
+      if (!byId.has(event.id)) byId.set(event.id, meta);
+    });
+
+    return { byIndex, byId };
+  }, [events]);
+
+  // Index-aligned decimal dates for the two map render loops, which parsed five date
+  // strings per state and one per location on every render.
+  const stateDates = useMemo(() => states.map((state) => (state ? {
+    start: convertDateToDecimal(state.startDate),
+    end: convertDateToDecimal(state.endDate),
+    statehood: Number(convertDateToDecimal(state.stateDate)),
+  } : null)), [states]);
+  const locationFoundDates = useMemo(
+    () => locations.map((location) => (location ? convertDateToDecimal(location.foundDate) : null)),
+    [locations],
+  );
+
+  const parentIds = useMemo(() => new Set(parents.map((entry) => entry.parent)), [parents]);
+  const expandedParents = useMemo(() => {
+    const map = new Map();
+    parents.forEach((entry) => map.set(entry.parent, entry.expanded));
+    return map;
+  }, [parents]);
+
+  const xFromMeta = useCallback((meta) => (meta.start - startYear + 0.5) * timeScale, [startYear, timeScale]);
+  const xEndFromMeta = useCallback((meta) => (
+    ((meta.end === null || ((meta.end - meta.start) * timeScale < 130))
+      ? ((meta.start - startYear) * timeScale + 130)
+      : ((meta.end - startYear) * timeScale)) + (timeScale * 0.4)
+  ), [startYear, timeScale]);
+
+  // Visible events grouped by location, built once per render instead of a full
+  // events.filter() (with date parsing in the predicate) per map pin.
+  const visibleByLocation = useMemo(() => {
+    const centre = timeX + (width / 2);
+    const reach = (width / 2) + 65;
+    const map = new Map();
+    events.forEach((event, index) => {
+      if (!event || !event.location) return;
+      const meta = eventMeta.byIndex[index];
+      if (!meta) return;
+      if (Math.abs(xFromMeta(meta) - centre) >= reach && Math.abs(xEndFromMeta(meta) - centre) >= reach) return;
+      if (!map.has(event.location)) map.set(event.location, []);
+      map.get(event.location).push(event);
+    });
+    return map;
+  }, [events, eventMeta, timeX, width, xFromMeta, xEndFromMeta]);
+
   const getCurrentState = (id) => {
-    const allStatesWithId = states
-        .filter(state => state !== null && state !== undefined && state.id === id);
-    return allStatesWithId.find(state => convertDateToDecimal(state.endDate) >= timeYear && convertDateToDecimal(state.startDate) <= timeYear);
+    const candidates = statesById.get(id);
+    if (!candidates) return undefined;
+    return candidates.find((state) => state.decimalEnd >= timeYear && state.decimalStart <= timeYear);
   }
   const oopsieDaisies = (id) => {
-    return states.find(state => state.id == id);
+    const candidates = statesById.get(id);
+    return candidates ? candidates[0] : undefined;
   }
   const getLocation = (id) => {
-    return locations.find(location => location.id == id);
+    return locationsById.get(id);
   }
   const isParentSelected = (parent) => {
-    const parentObj = parents.find(p => p.parent === parent);
-    return parentObj ? parentObj.expanded : false;
+    return expandedParents.get(parent) ?? false;
   }
   const isListedAsParent = (id) => {
-    return parents.some(parent => parent.parent === id);
+    return parentIds.has(id);
   }
   const isListedAsState = (id) => {
-    return states.some(state => state.id === id);
+    return statesById.has(id);
   }
   const isListedAsLoc = (id) => {
-    return locations.some(location => location.id === id);
+    return locationsById.has(id);
   }
 
   const [scrolling, setScrolling] = useState(true);
@@ -292,31 +517,65 @@ export default function Home({ states, locations, events, onCompleted, onError }
     setMapY(newY);
   }, [mapX, mapY, height, borderY, mapLimX, mapLimY, mapScale, width]);
 
-  const onNumberLineScroll = useCallback((e) => {
-    const xScroll = numberLineRef.current?.scrollLeft;
-  
-    let newX = xScroll;
-    timelineRef.current.scrollLeft = xScroll;
-  
-    setTimeX(newX);
-    setTimeYear((((newX) + width / 2) / timeScale) + (startYear - 0.5));
+  // The two scroll containers drive each other's scrollLeft. Remembering the value we
+  // pushed lets the induced scroll event bail out instead of setting state a second time.
+  const syncedScrollX = useRef(null);
+  // Scroll fires far faster than React can render, so updates are coalesced to one per frame.
+  const scrollFrame = useRef(null);
+  const pendingScroll = useRef(null);
+  useEffect(() => () => {
+    if (scrollFrame.current !== null) cancelAnimationFrame(scrollFrame.current);
+  }, []);
+
+  const commitScroll = useCallback(() => {
+    scrollFrame.current = null;
+    const next = pendingScroll.current;
+    if (!next) return;
+    pendingScroll.current = null;
+    setTimeX(next.x);
+    if (next.y !== null) setTimeY(next.y);
+    if (Number.isFinite(width) && Number.isFinite(timeScale)) {
+      setTimeYear(((next.x + width / 2) / timeScale) + (startYear - 0.5));
+    }
     setScrolling(true);
-  }, [numberLineRef, timelineRef, width, timeScale, startYear]);
-  const onTimelineScroll = useCallback((e) => {
+  }, [width, timeScale, startYear]);
+
+  const queueScroll = useCallback((x, y) => {
+    pendingScroll.current = { x, y };
+    if (scrollFrame.current === null) {
+      scrollFrame.current = requestAnimationFrame(commitScroll);
+    }
+  }, [commitScroll]);
+
+  const onNumberLineScroll = useCallback(() => {
+    const xScroll = numberLineRef.current?.scrollLeft;
+    if (xScroll == null) return;
+    if (syncedScrollX.current === xScroll) {
+      syncedScrollX.current = null;
+      return;
+    }
+    if (timelineRef.current && timelineRef.current.scrollLeft !== xScroll) {
+      syncedScrollX.current = xScroll;
+      timelineRef.current.scrollLeft = xScroll;
+    }
+    queueScroll(xScroll, null);
+  }, [queueScroll]);
+
+  const onTimelineScroll = useCallback(() => {
     const xScroll = timelineRef.current?.scrollLeft;
     const yScroll = timelineRef.current?.scrollTop;
-    const { scrollTop, scrollHeight, clientHeight } = e.target;
-    const scrollRatio = scrollTop / (scrollHeight - clientHeight);
-
-    var newX = xScroll;
-    var newY = yScroll;
-    numberLineRef.current.scrollLeft = xScroll;
-
-    setTimeX(newX);
-    setTimeY(newY);
-    setTimeYear((((newX) + width / 2) / timeScale) + (startYear - 0.5));
-    setScrolling(true);
-  }, [timelineRef, numberLineRef, width, timeScale, startYear]);
+    if (xScroll == null) return;
+    if (syncedScrollX.current === xScroll) {
+      syncedScrollX.current = null;
+      queueScroll(xScroll, yScroll);
+      return;
+    }
+    if (numberLineRef.current && numberLineRef.current.scrollLeft !== xScroll) {
+      syncedScrollX.current = xScroll;
+      numberLineRef.current.scrollLeft = xScroll;
+    }
+    queueScroll(xScroll, yScroll);
+  }, [queueScroll]);
   const onTimelineZoom = useCallback((value) => {
     const xTime = (timeX + (width / 2)) / timeScale;
 
@@ -331,40 +590,46 @@ export default function Home({ states, locations, events, onCompleted, onError }
     setScrolling(true);
   }, [timelineRef, numberLineRef, width, timeScale, timeX]);
 
+  // Only the events inside the horizontal viewport are handed to React. The map used to
+  // run over all of them and return `false` for the ones off-screen, so React still
+  // reconciled an entry per event on every frame.
+  const visibleTimelineEvents = useMemo(() => {
+    const left = timeX;
+    const right = timeX + (width * 1.1);
+    const result = [];
+    events.forEach((event, index) => {
+      const meta = eventMeta.byIndex[index];
+      if (!meta) return;
+      if (xFromMeta(meta) < right && xEndFromMeta(meta) > left) result.push({ event, index });
+    });
+    return result;
+  }, [events, eventMeta, timeX, width, xFromMeta, xEndFromMeta]);
+
   const getLocX = (event) => {
-    if(event?.location) {
-      if(isListedAsState(event.location)) {
-        const locSel = getCurrentState(event.location) || oopsieDaisies(event.location);
-        return Number(locSel.x) + Number(locSel.xLabel) + (Number(locSel.width) / 2);
-      } else if(isListedAsLoc(event.location)) {
-        const locSel = getLocation(event.location);
-        return latLonToX(Number(locSel.lat), Number(locSel.long));
-      } else {
-        return null;
-      }
-    } else {
-      return null;;
+    if (!event?.location) return null;
+    if (isListedAsState(event.location)) {
+      const locSel = getCurrentState(event.location) || oopsieDaisies(event.location);
+      if (!locSel) return null;
+      return Number(locSel.x) + Number(locSel.xLabel) + (Number(locSel.width) / 2);
     }
+    const point = locationPoints.get(event.location);
+    return point ? point.x : null;
   }
   const getLocY = (event) => {
-    if(event?.location) {
-      if(isListedAsState(event.location)) {
-        const locSel = getCurrentState(event.location) || oopsieDaisies(event.location);
-        return Number(locSel.y) + Number(locSel.yLabel) + (Number(locSel.height) / 2);
-      } else if(isListedAsLoc(event.location)) {
-        const locSel = getLocation(event.location);
-        return latLonToY(Number(locSel.lat), Number(locSel.long));
-      } else {
-        return null;
-      }
-    } else {
-      return null;;
+    if (!event?.location) return null;
+    if (isListedAsState(event.location)) {
+      const locSel = getCurrentState(event.location) || oopsieDaisies(event.location);
+      if (!locSel) return null;
+      return Number(locSel.y) + Number(locSel.yLabel) + (Number(locSel.height) / 2);
     }
+    const point = locationPoints.get(event.location);
+    return point ? point.y : null;
   }
-  const getEventX = (event) => { return ((convertDateToDecimal(event.startDate) - startYear + 0.5) * timeScale); }
-  const getEventXEnd = (event) => { return ((!event?.endDate || ((convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate)) * timeScale < 130)) ? ((convertDateToDecimal(event.startDate) - startYear) * timeScale + 130) :
-      ((convertDateToDecimal(event.endDate) - startYear) * timeScale)) + (timeScale * 0.4); }
-  const getEventY = (event) => { return ((event.period) ? (remainderQuadIndexPeriod(event, events) * (65 / 2)) : ((categoryToIndex(event.category) * 65 * 2) + (isEvenIndexInCategory(event, events) ? 0 : 65))); }
+  const metaOf = (event) => (event ? eventMeta.byId.get(event.id) : null);
+  const getEventX = (event) => { const meta = metaOf(event); return meta ? xFromMeta(meta) : 0; }
+  const getEventXEnd = (event) => { const meta = metaOf(event); return meta ? xEndFromMeta(meta) : 0; }
+  const getEventY = (event) => { const meta = metaOf(event); return meta ? meta.y : 0; }
+  const eventSpan = (event) => { const meta = metaOf(event); return (meta && meta.end !== null) ? (meta.end - meta.start) : 0; }
   const eventClick = (event) => {
     if(event?.id) {
       const clickX = getEventX(event);
@@ -434,28 +699,16 @@ export default function Home({ states, locations, events, onCompleted, onError }
     return Math.sqrt(Math.pow(Math.abs(posX - (mousePos.x - mapX) / mapScale), 2) + Math.pow(Math.abs(posY - (mousePos.y - mapY - 70) / mapScale), 2)) < (10 / mapScale);
   }
   const eventVisible = (event) => {
-    return (Math.abs(getEventX(event) - (timeX + (width / 2))) < (width / 2 + 65)) || (Math.abs(getEventXEnd(event) - (timeX + (width / 2))) < (width / 2 + 65));
+    const meta = metaOf(event);
+    if (!meta) return false;
+    const centre = timeX + (width / 2);
+    const reach = (width / 2) + 65;
+    return Math.abs(xFromMeta(meta) - centre) < reach || Math.abs(xEndFromMeta(meta) - centre) < reach;
   }
-  const indexAtLoc = (event) => {
-    const eventsVisible = events.filter(e => e !== null && e !== undefined && eventVisible(e) && e.location == event.location);
-    return eventsVisible.indexOf(event);
-  }
-  const eventFromId = (eventId) => {
-    return events.find(e => e.id == eventId);
-  }
-  const eventsAtLocLen = (event) => {
-    const eventsVisible = events.filter(e => e !== null && e !== undefined && eventVisible(e) && e.location == event.location);
-    return eventsVisible.length;
-  }
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      timelineRef.current.scrollLeft = timeX;
-      timelineRef.current.scrollTop = timeY;
-      numberLineRef.current.scrollLeft = timeX;
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [timeX, timeY]);
+  const eventsVisibleAt = (location) => visibleByLocation.get(location) ?? [];
+  const indexAtLoc = (event) => eventsVisibleAt(event.location).indexOf(event);
+  const eventFromId = (eventId) => eventsById.get(eventId);
+  const eventsAtLocLen = (event) => eventsVisibleAt(event.location).length;
 
   return (
     <Layout page="history">
@@ -469,8 +722,8 @@ export default function Home({ states, locations, events, onCompleted, onError }
         <svg width={'10rem'} height={'100%'} style={{background:`linear-gradient(90deg, rgba(0,0,0,0.8), transparent)`,zIndex:109}}></svg>
         <Image className={mapStyles.compass} src="/images/compass.png" height={256} width={256} alt="compass" style={{height:`${compassDimensions(height, borderY)}px`,width:`${compassDimensions(height, borderY)}px`,
             top:`calc(${((height - 64) * borderY)}px - ${compassDimensions(height, borderY)}px - 1.2rem)`}}/>
-        <DraggableCore onDrag={(e, data) => {onMapDrag(data)}} onMouseDown={(e) => {setOriginalMousePos({ x: e.clientX, y: e.clientY });setOriginalMapPos({ x: mapX, y: mapY })}} onStart={() => setIsDragging(true)} onStop={() => setIsDragging(false)}>
-          <div onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} style={{position:"absolute",width:"100%",height:"100%",zIndex:100,transform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,WebkitTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,
+        <DraggableCore onDrag={(e, data) => {onMapDrag(data)}} onStart={() => setIsDragging(true)} onStop={() => setIsDragging(false)}>
+          <div onMouseMove={onMapMouseMove} style={{position:"absolute",width:"100%",height:"100%",zIndex:100,transform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,WebkitTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,
               msTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,transformOrigin:"top left",WebkitTransformOrigin:"top left",msTransformOrigin:"top left"}}
               className={`${(mapScrolling && !isDragging) && mapStyles.draggableMapSlow}`} onMouseDownCapture={mapMouseDown} onMouseUpCapture={mapMouseUp}>
 
@@ -510,11 +763,11 @@ export default function Home({ states, locations, events, onCompleted, onError }
             )}
             
             {states.map((state, index) => (
-              <>
-                {(convertDateToDecimal(state.startDate) <= timeYear && convertDateToDecimal(state.endDate) > timeYear) &&
+              <React.Fragment key={state.name ?? index}>
+                {(stateDates[index] && stateDates[index].start <= timeYear && stateDates[index].end > timeYear) &&
                   <>
-                    <State name={state.name} className={`${stateStyles.state} ${locSel == state.id && ((Number(convertDateToDecimal(state.stateDate)) > timeYear) ? stateStyles.nonStateHover : stateStyles.stateHover)}
-                        ${(Number(convertDateToDecimal(state.stateDate)) > timeYear) && stateStyles.nonState}`}
+                    <State name={state.name} className={`${stateStyles.state} ${locSel == state.id && ((stateDates[index].statehood > timeYear) ? stateStyles.nonStateHover : stateStyles.stateHover)}
+                        ${(stateDates[index].statehood > timeYear) && stateStyles.nonState}`}
                         width={Number(state.width) + 5} height={Number(state.height) + 5}
                         style={{left:Number(state.x),top:Number(state.y),strokeWidth:`${0.4 / mapScale + 0.2}rem`}}
                         onCompleted={onCompleted} onError={onError} id={state.id}
@@ -523,29 +776,29 @@ export default function Home({ states, locations, events, onCompleted, onError }
                     />
                     <div style={{left:Number(state.x) + Number(state.xLabel), top:Number(state.y) + Number(state.yLabel), width:Number(state.width) + 5, height:Number(state.height) + 5,
                         fontSize: 6 * Math.pow((2/3) * Number(state.width) + (1/3) * Number(state.height), 0.3)}}>
-                      <h2 className={`${stateStyles.state} ${stateStyles.stateLabel} ${(Number(convertDateToDecimal(state.stateDate)) > timeYear) && stateStyles.nonStateLabel}`}
+                      <h2 className={`${stateStyles.state} ${stateStyles.stateLabel} ${(stateDates[index].statehood > timeYear) && stateStyles.nonStateLabel}`}
                             style={{transformOrigin:`center center`,transform:`scale(${0.4 / mapScale + 0.3})`,opacity: `${(inHidden == index || locSel == state.id) ? 0.6 : 0}`}}>
-                        {state.displayName + ((Number(convertDateToDecimal(state.stateDate)) > timeYear) ? ' Territory' : '')}
+                        {state.displayName + ((stateDates[index].statehood > timeYear) ? ' Territory' : '')}
                       </h2>
                     </div>
                   </>
                 }
-              </>
+              </React.Fragment>
             ))}
 
-            {locations.map((location, index) => (((convertDateToDecimal(location.foundDate) <= timeYear) &&
+            {locations.map((location, index) => (((locationFoundDates[index] <= timeYear) &&
                 ((location.size == 5) || (location.size == 4 && mapScale > 0.4) || (location.size == 3 && mapScale > 1) || (location.size == 2 && mapScale > 1.7) || (location.size == 1 && mapScale > 2.5))) || (location.id == locSel)) && (
-              <>
+              <React.Fragment key={location.id ?? index}>
                 <div style={{transformOrigin:`top left`,transform:`scale(${(location.size / 10 + 0.3) / mapScale + 0.1})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:115,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
                   <div className={`${mapStyles.locationDot}`} style={{opacity:(locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) || locSel == location.id) ? 1 : (0.3 + (location.size / 10))}}></div>
                   <h3 className={`${mapStyles.locationLabel} ${(!locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) && locSel != location.id) && mapStyles.locationLabelHidden}`}>{location.displayName}</h3>
                 </div>
-              </>
+              </React.Fragment>
             ))}
 
             {events.map((event, i) => ((getLocX(event) != null && event.location != null && (eventVisible(event) || event.id == eventSelected || eventsOpen.find(e => e == event.id) != null)) &&
               ((eventsAtLocLen(event) <= 1 || event.id == eventSelected) ? (
-                <MapSvg className={`${timelineStyles.eventsp} ${timelineStyles[event.category + 'p']} ${eventSelected == event.id && timelineStyles.selectedPin}`} width={40} height={30} style={{transformOrigin:`bottom center`,
+                <MapSvg key={event.id ?? i} className={`${timelineStyles.eventsp} ${timelineStyles[event.category + 'p']} ${eventSelected == event.id && timelineStyles.selectedPin}`} width={40} height={30} style={{transformOrigin:`bottom center`,
                     transform:`translate(${getLocX(event)}px, ${getLocY(event)}px) scale(${(0.9 / mapScale + 0.1) * (eventSelected == event.id ? 1.3 : 1)})`}}
                     name={'pin'} onCompleted={onCompleted} onError={onError} onMouseDownCapture={mapMouseDown}
                     onMouseUpCapture={(e) => {
@@ -557,7 +810,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
                 />
               ) : (
                 ((indexAtLoc(event) == 0) && (event.location != eventFromId(eventSelected)?.location)) && (
-                  <div className={`${timelineStyles.eventspMulti} ${locSel == event.location && timelineStyles.selectedPin}`} style={{transformOrigin:`bottom center`,
+                  <div key={event.id ?? i} className={`${timelineStyles.eventspMulti} ${locSel == event.location && timelineStyles.selectedPin}`} style={{transformOrigin:`bottom center`,
                         transform:`translate(${getLocX(event)}px, ${getLocY(event)}px) scale(${(0.9 / mapScale + 0.1) * (locSel == event.location ? 1.3 : 1)})`}}>
                     <MapSvg className={`${timelineStyles[event.category + 'p']}`} width={40} height={30}
                         style={{top:-30,left:-20}}
@@ -581,13 +834,13 @@ export default function Home({ states, locations, events, onCompleted, onError }
                     {(locSel == event.location && (
                       <>
                         <div className={timelineStyles.eventspListArrow} style={{transformOrigin:`center left`,transform:`translate(${0}px, -50%) scale(0.6)`}}></div>
-                        <div className={`${utilStyles.scrollable} ${timelineStyles.eventspList}`} style={{width:`calc(${Math.max(...eventsPinDivRef.current.map(el => el ? el.offsetWidth : 0))}px +
+                        <div className={`${utilStyles.scrollable} ${timelineStyles.eventspList}`} style={{width:`calc(${Math.max(0, ...measuredWidths.current.pinDivs)}px +
                             ${eventsAtLocLen(event) * 72 - 10 > 450 ? 0.9 : 0}rem)`,pointerEvents:'auto',height:`calc(${Math.min(eventsAtLocLen(event) * 72 - 10, 450)}px)`,
                             transformOrigin:`center left`,transform:`translate(${0}px, -50%) scale(0.6)`,overflowY:`${eventsAtLocLen(event) * 72 - 10 < 450 ? 'hidden' : 'scroll'}`}} onWheel={(e) => e.stopPropagation()}>
-                          {events.filter(e => e !== null && e !== undefined && eventVisible(e) && e.location == event.location).map((eInList, j) => (
-                            <>
+                          {eventsVisibleAt(event.location).map((eInList, j) => (
+                            <React.Fragment key={eInList.id ?? j}>
                               <div ref={el => setRef(eventsPinDivRef, el, j)} className={`${timelineStyles.events} ${timelineStyles.eventspListEvent} ${timelineStyles[eInList.category]}`} style={{transform:`translate(0px, ${indexAtLoc(eInList) * 72}px)`,
-                                  width:`calc(${(eventsPinRef.current[j]?.offsetWidth < (130 + (eInList?.endDate && 70))) ? (129 + (eInList?.endDate && 70)) : (eventsPinRef.current[j]?.offsetWidth - 0.01)}px + 1rem)`}}
+                                  width:`calc(${labelWidth(measuredWidths.current.pins[j], eInList?.endDate)}px + 1rem)`}}
                                   onMouseDownCapture={mapMouseDown}
                                   onMouseUpCapture={(e) => {
                                     const {x, y} = tempMousePos.current;
@@ -613,7 +866,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
                                   <FilterIcon className={timelineStyles.filterIcon} filter={eInList.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
                                 </div>
                               </div>
-                            </>
+                            </React.Fragment>
                           ))}
                         </div>
                       </>
@@ -634,7 +887,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
               <div className={`${infoStyles.infoBoxTabs}`}>
                 {eventsOpen.map((eOpen, i) => (
-                  <div className={`${infoStyles.infoBoxTab} ${timelineStyles[eventFromId(eOpen).category + 'Tab']} ${eventOpenSelected == eOpen && infoStyles.infoBoxTabSel}`} onClick={() => setEventOpenSelected(eOpen)}>
+                  <div key={eOpen ?? i} className={`${infoStyles.infoBoxTab} ${timelineStyles[eventFromId(eOpen).category + 'Tab']} ${eventOpenSelected == eOpen && infoStyles.infoBoxTabSel}`} onClick={() => setEventOpenSelected(eOpen)}>
                     <p style={{fontStyle:`${eventFromId(eOpen).italics ? 'italic' : 'normal'}`}}>
                       {eventFromId(eOpen).displayName}
                     </p>
@@ -708,8 +961,8 @@ export default function Home({ states, locations, events, onCompleted, onError }
           <div className={`${utilStyles.scrollable} ${timelineStyles.searchResults}`} style={{width:`15.7rem`,pointerEvents:'auto',height:`${100 / 0.6}%`,transformOrigin:`top left`,transform:`scale(0.6)`,
                 overflowY:`${searchMatches.length * 43 - 5 < height - ((height - 64) * borderY) - 210 ? 'hidden' : 'scroll'}`}}>
             {searchMatches.map((eInList, j) => (
-              <div className={`${timelineStyles.events} ${timelineStyles.eventspListEvent} ${timelineStyles[eInList.category]}`} style={{transform:`translate(0px, ${j * 72}px)`,
-                  width:`calc(${(searchResultsRef.current[j]?.offsetWidth < (130 + (eInList?.endDate && 70))) ? (129 + (eInList?.endDate && 70)) : (searchResultsRef.current[j]?.offsetWidth - 0.01)}px + 1rem)`,maxWidth:`15.7rem`}}
+              <div key={eInList.id ?? j} className={`${timelineStyles.events} ${timelineStyles.eventspListEvent} ${timelineStyles[eInList.category]}`} style={{transform:`translate(0px, ${j * 72}px)`,
+                  width:`calc(${labelWidth(widths[j], eInList?.endDate)}px + 1rem)`,maxWidth:`15.7rem`}}
                   onMouseDownCapture={mapMouseDown}
                   onMouseUpCapture={(e) => {
                     const {x, y} = tempMousePos.current;
@@ -742,16 +995,18 @@ export default function Home({ states, locations, events, onCompleted, onError }
       <section id={`timeline`} className={`${timelineStyles.timeline} ${utilStyles.scrollable}`} onScroll={onTimelineScroll} ref={timelineRef}
           style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,position:'absolute'}}>
         <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`,overflow:'hidden'}} onMouseUpCapture={() => {if(!isDragging) { eventClick(null); setLocSel(null); }}}>
-          {events.map((event, i) => (
-            ((getEventX(event) < timeX + (width * 1.1)) && (getEventXEnd(event) > timeX)) && (
+          {visibleTimelineEvents.map(({ event, index: i }) => (
+            (
               (!event.period) ? (
-                <div style={{zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>
+                <div key={event.id ?? i} style={{zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>
 
-                  <HoverVisibleDiv $length={(eventsRef.current[i]?.offsetWidth < (130 + (event?.endDate && 70))) ? (129 + (event?.endDate && 70)) : (eventsRef.current[i]?.offsetWidth - 0.01)} $opacity={(event.importance / 9) + 0.4} 
+                  <HoverVisibleDiv $length={labelWidth(measuredWidths.current.events[i], event?.endDate)} $opacity={(event.importance / 9) + 0.4} 
                         $isParent={isListedAsParent(event.id)} $expanded={(event?.parent ? (isParentSelected(event.parent)) : true)} $corners={event?.endDate} $isChild={event?.parent} 
-                        $translateX={getEventX(event)} $translateY={getEventY(event)}
-                        $isParentExpanded={isParentSelected(event.id)} $isSelected={eventSelected == event.id} key={i} id={event.id} onClick={(e) => eventClick(event)}
-                        style={{marginTop:`${event?.parent ? (isParentSelected(event.parent) ? 0 : -0.5) : 0}rem`}}
+                        $isParentExpanded={isParentSelected(event.id)} $isSelected={eventSelected == event.id} id={event.id} onClick={(e) => eventClick(event)}
+                        style={{marginTop:`${event?.parent ? (isParentSelected(event.parent) ? 0 : -0.5) : 0}rem`,
+                            transform:`translate(calc(${getEventX(event)}px), calc(${getEventY(event)}px + 0.1rem))`,
+                            WebkitTransform:`translate(calc(${getEventX(event)}px), calc(${getEventY(event)}px + 0.1rem))`,
+                            msTransform:`translate(calc(${getEventX(event)}px), calc(${getEventY(event)}px + 0.1rem))`}}
                         className={`${timelineStyles.events} ${timelineStyles[event.category]} ${event?.parent && timelineStyles.childEvent} ${event.id == eventSelected && timelineStyles.selectedEvent}`}>
                     <div style={{overflow:'hidden',height:'2rem'}}>
                       <h6 ref={el => setRef(eventsRef, el, i)} style={{fontStyle:`${event.italics ? 'italic' : 'normal'}`}}>
@@ -770,7 +1025,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
                       <FilterIcon className={timelineStyles.filterIcon} filter={event.filter} onCompleted={onCompleted} onError={onError}></FilterIcon>
                     </div>
                     {(event?.endDate) && (
-                      <div style={{width:`calc(${(timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))) < 22 ? 22 : (timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate)))}px)`,
+                      <div style={{width:`calc(${(timeScale * eventSpan(event)) < 22 ? 22 : (timeScale * eventSpan(event))}px)`,
                           position:'absolute',top:'-0.29rem',left:'-0.3rem',height:'calc(32px)',borderTopRightRadius:'0.6rem',borderBottomLeftRadius:'0rem',borderBottomRightRadius:'0rem',overflow:'hidden'}}
                           className={`eventRange ${timelineStyles.eventRange}`}>
                         <div className={`${timelineStyles[event.category + 'l']}`} style={{width:'100%',height:'0.25rem'}}></div>
@@ -788,7 +1043,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
                   {(event?.endDate && !(event?.parent && !isParentSelected(event.parent))) && (
                     <>
-                      <div className={`${timelineStyles.eventsl} ${timelineStyles[event.category + 'l']}`} style={{width:`calc(${timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))}px)`,
+                      <div className={`${timelineStyles.eventsl} ${timelineStyles[event.category + 'l']}`} style={{width:`calc(${timeScale * eventSpan(event)}px)`,
                           height:'calc(30px)',
                           transform:`translate(${getEventX(event)}px, calc(${getEventY(event)}px + 0.1rem))`,
                           WebkitTransform:`translate(${getEventX(event)}px), calc(${getEventY(event)}px + 0.1rem))`,
@@ -800,9 +1055,9 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
                 </div>
               ) : (
-                <div style={{zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>
+                <div key={event.id ?? i} style={{zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>
 
-                  <div className={`${timelineStyles.period} ${timelineStyles[event.category + 'Period']} ${event.id == eventSelected && timelineStyles.selectedPeriod}`} style={{width:`calc(${timeScale * (convertDateToDecimal(event.endDate) - convertDateToDecimal(event.startDate))}px + 2rem)`,
+                  <div className={`${timelineStyles.period} ${timelineStyles[event.category + 'Period']} ${event.id == eventSelected && timelineStyles.selectedPeriod}`} style={{width:`calc(${timeScale * eventSpan(event)}px + 2rem)`,
                       height:'29px',transform:`translate(calc(${getEventX(event)}px - 1rem), calc(${getEventY(event)}px + 0.1rem))`,
                       WebkitTransform:`translate(${getEventX(event)}px), calc(${getEventY(event)}px + 0.1rem))`,
                       msTransform:`translate(${getEventX(event)}px), calc(${getEventY(event)}px + 0.1rem))`}} onClick={() => eventClick(event)}>
@@ -826,7 +1081,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
           {/* VERTICAL LINES */}
           {[...Array(endYear - startYear + 1)].map((e, i) => (
             (Math.abs((i * timeScale) - timeX) < width * 2) && (
-              <>
+              <React.Fragment key={i}>
                 {(timeScale > 70) ? (
                   <>
                   <div style={{transform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,WebkitTransform:`translate(calc(${(i * timeScale) + (timeScale / 2)}px - 0.15rem), 0rem)`,
@@ -846,25 +1101,25 @@ export default function Home({ states, locations, events, onCompleted, onError }
                         msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'100%',top:0,backgroundColor:'#333443'}}></div>
                   </>
                 )}
-              </>
+              </React.Fragment>
             )
           ))}
 
           {/* HORIZONTAL LINES */}
           {[...Array((8 * 2) + 1)].map((e, i) => (
             (Math.abs((i * timeScale) - timeY) < height * 2) && (
-              <>
+              <React.Fragment key={i}>
                 <div style={{transform:`translate(0rem, calc(${(i * 65)}px - 0.1rem))`,WebkitTransform:`translate(0rem, calc(${(i * 65)}px - 0.1rem))`,msTransform:`translate(0rem, calc(${(i * 65)}px - 0.1rem))`,
                     opacity:`${i % 2 == 0 ? 0.5 : 0.15}`,position:'absolute',width:'100%',height:'0.2rem',top:0,backgroundColor:'#76768B'}}></div>
-              </>
+              </React.Fragment>
             )
           ))}
           {[...Array(2)].map((e, i) => (
             (Math.abs((i * timeScale) - timeY) < height * 2) && (
-              <>
+              <React.Fragment key={i}>
                 <div style={{transform:`translate(0rem, calc(${((i + 0.5) * 65)}px - 0.1rem))`,WebkitTransform:`translate(0rem, calc(${((i + 0.5) * 65)}px - 0.1rem))`,msTransform:`translate(0rem, calc(${((i + 0.5) * 65)}px - 0.1rem))`,
                     opacity:`0.15`,position:'absolute',width:'100%',height:'0.2rem',top:0,backgroundColor:'#76768B'}}></div>
-              </>
+              </React.Fragment>
             )
           ))}
 
@@ -876,7 +1131,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
         <div style={{position:'absolute',height:'100%',width:`calc(${timeLimX}px)`,overflow:'hidden'}}>
           {[...Array(endYear - startYear + 1)].map((e, i) => (
             (Math.abs((i * timeScale) - timeX) < width * 2) && (
-              <>
+              <React.Fragment key={i}>
                 {(timeScale > 100 || (i % 2 == 0 && (timeScale > 40 || i % 4 == 0))) && (
                   <h2 style={{transform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,WebkitTransform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,
                       msTransform:`translate(${(i * timeScale) - (timeScale > 100 ? 0 : (timeScale * 0.5))}px, 0rem)`,width:`${timeScale > 100 ? timeScale : (timeScale * 2)}px`,textAlign:'center'}}>
@@ -902,7 +1157,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
                         msTransform:`translate(calc(${(i * timeScale)}px - 0.075rem), 0rem)`,position:'absolute',width:'0.15rem',height:'0.4rem',top:0,backgroundColor:'#E9EAF3'}}></div>
                   </>
                 )}
-              </>
+              </React.Fragment>
             )
           ))}
         </div>

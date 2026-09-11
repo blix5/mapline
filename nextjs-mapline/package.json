@@ -4,6 +4,8 @@
     "node": ">=18"
   },
   "scripts": {
+    "prepare-geojson": "node scripts/prepare-geojson.mjs",
+    "prebuild": "node scripts/prepare-geojson.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start"
@@ -30,35 +32,25 @@
     "levenshtein-edit-distance": "^3.0.1",
     "lodash": "^4.17.21",
     "lodash.debounce": "^4.0.8",
-    "mathjs": "^13.0.3",
-    "natural": "^7.1.0",
     "next": "^14.0.2",
-    "next-usequerystate": "^1.17.4",
-    "node": "^18.20.4",
-    "numeric": "^1.2.6",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-draggable": "^4.4.6",
-    "react-native-extended-stylesheet": "^0.12.0",
-    "react-router-dom": "^6.24.1",
-    "react-scripts": "^5.0.1",
     "react-scroll": "^1.9.0",
     "react-use": "^17.4.0",
     "remark": "^14.0.3",
     "remark-html": "^15.0.2",
-    "request": "^2.79.0",
-    "router-dom": "^2.2.11",
     "sharp": "^0.33.4",
     "simplify-geojson": "^1.0.5",
     "styled-components": "^6.1.11",
     "topojson-client": "^3.1.0",
     "topojson-server": "^3.0.1",
-    "topojson-simplify": "^3.0.3",
-    "turf": "^3.0.14"
+    "topojson-simplify": "^3.0.3"
   },
   "devDependencies": {
     "@svgr/webpack": "^8.1.0",
     "@types/react": "18.2.39",
-    "json-loader": "^0.5.7"
+    "json-loader": "^0.5.7",
+    "typescript": "^4.9.5"
   }
 }
