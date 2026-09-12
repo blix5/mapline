@@ -64,12 +64,24 @@
     -webkit-text-stroke: .15rem #aab2d4;
 }
 
-@keyframes fadeInLabel {
-    0% { opacity: 0; }
-    100% {opacity: 1; }
+/* ---- Load reveal ----------------------------------------------------------------
+   .state is on both the <State> svg and its label span, and the label's opacity is set
+   inline (0.85 when hovered, 0 otherwise), so the implicit 100% below resolves to
+   whichever applies rather than forcing both to 1. */
+:global(.mapline-intro-pending) .state {
+    opacity: 0;
 }
 
-@keyframes fadeOutLabel {
-    0% { opacity: 1; }
-    100% { opacity: 0; }
+:global(.mapline-intro-run) .state {
+    animation: introStateFlash 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.05s backwards;
+}
+
+@keyframes introStateFlash {
+    from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :global(.mapline-intro-run) .state {
+        animation: none;
+    }
 }

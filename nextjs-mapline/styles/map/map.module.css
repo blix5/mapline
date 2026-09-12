@@ -128,3 +128,67 @@
     -ms-user-select: none;
     user-select: none;
 }
+/* ---- Load reveal ---------------------------------------------------------------
+   The marker classes are :global because the event pins these rules sit beside are
+   styled from timeline.module.css while living inside #map - a CSS-module class cannot
+   be the ancestor in a selector written in another module. pages/index.tsx applies the
+   literal strings.
+
+   Only content is gated, never the ocean, the vignette or the grid skeleton: the pane
+   keeps its ground throughout, which is what makes this read as a cross-fade rather
+   than as a page appearing from nothing. */
+
+/* Carries a real declaration so the rule survives minification and the class name lands
+   in the module's export map. The projection components spread {...rest} onto their root
+   <svg>, so index.tsx can hand this to all seven without editing that file. */
+.mapLayer {
+    position: absolute;
+}
+
+:global(.mapline-intro-pending) .mapLayer,
+:global(.mapline-intro-pending) .locationDot,
+:global(.mapline-intro-pending) .locationLabel {
+    opacity: 0;
+    transition: none;
+}
+
+:global(.mapline-intro-run) .mapLayer {
+    animation: introFlash 0.35s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+:global(.mapline-intro-run) .locationDot {
+    animation: introDotRise 0.4s cubic-bezier(0.16, 1, 0.3, 1) calc(0.1s + var(--sweep, 0s)) backwards;
+}
+:global(.mapline-intro-run) .locationLabel {
+    animation: introFlash 0.4s cubic-bezier(0.16, 1, 0.3, 1) calc(0.1s + var(--sweep, 0s)) backwards;
+}
+
+/* No `to` block in any of these. The implicit 100% resolves to the element's own
+   computed value, so each lands exactly on its real opacity - which matters because
+   these opacities are per-item and set inline (location dots are sized by importance).
+   An explicit `to { opacity: 1 }` would finish at 1 and then snap back down. Paired
+   with `backwards` rather than `forwards` so nothing stays pinned afterwards. */
+@keyframes introFlash {
+    from { opacity: 0; }
+}
+
+@keyframes introDotRise {
+    from {
+        opacity: 0;
+        /* The `translate` property, not `transform`: transform is already occupied by
+           the inline per-item positioning, and translate composes before it, so the
+           rise stays 0.4rem regardless of mapScale. */
+        translate: 0 0.4rem;
+        filter: blur(0.15rem);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    /* global.css flattens animation-duration but not animation-delay, which would park
+       these at their from-state for the length of the delay and then pop. The shorthand
+       clears the delay too. */
+    :global(.mapline-intro-run) .mapLayer,
+    :global(.mapline-intro-run) .locationDot,
+    :global(.mapline-intro-run) .locationLabel {
+        animation: none;
+    }
+}

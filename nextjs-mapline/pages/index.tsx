@@ -23,7 +23,7 @@ import { getSheetData } from '../libs/sheets';
 
 import State from '../libs/map/State';
 import MapSvg from '../libs/map/MapSvg';
-import { useMapDataReady, LowProjectionLCC, LowTopProjectionLCC, MediumProjectionLCC, MediumTopProjectionLCC, MediumTopLabelProjectionLCC, MediumTopRiverLabelProjectionLCC, HighTopLabelProjectionLCC, latLonToX, latLonToY } from '../libs/map/LambertConformalConicMap';
+import { useMapDataReady, useMapBaseDrawn, LowProjectionLCC, LowTopProjectionLCC, MediumProjectionLCC, MediumTopProjectionLCC, MediumTopLabelProjectionLCC, MediumTopRiverLabelProjectionLCC, HighTopLabelProjectionLCC, latLonToX, latLonToY } from '../libs/map/LambertConformalConicMap';
 import FilterIcon from '../libs/FilterIcon';
 import Icon from '../libs/Icon';
 
@@ -90,6 +90,10 @@ const scrollOptions = (horizontal) => ({
 // Width of an event box from its measured label, never narrower than the date column.
 // Mirrors the original inline expression, but returns the floor (instead of NaN) when
 // the element has not been measured yet.
+// '' at 'done', which is what stops the intro animations matching anything ever again.
+const introMarker = (phase, prefix) =>
+  phase === 'idle' ? `${prefix}-pending` : phase === 'running' ? `${prefix}-run` : '';
+
 const labelWidth = (measured, hasEndDate) => {
   const floor = 130 + (hasEndDate ? 70 : 0);
   return (!measured || measured < floor) ? (floor - 1) : (measured - 0.01);
@@ -105,6 +109,15 @@ export default function Home({ states, locations, events, onCompleted, onError }
   // grid stands in for it. The rest of the page renders immediately: the timeline's data
   // comes from getStaticProps and has nothing to wait for.
   const mapDataReady = useMapDataReady();
+  // mapDataReady flips on whichever GeoJSON file resolves first, which is not
+  // necessarily the tier on screen, and the projections draw with d3 a frame later
+  // anyway. This one means there are actually paths in the DOM to reveal.
+  const mapBaseDrawn = useMapBaseDrawn();
+  // Pan, zoom and both scroll offsets are final. Nothing else means this: urlRestored
+  // and pendingScrollRestore are refs (no re-render), and `scrolling` starts true and
+  // is re-triggered by the restore, so it is anti-correlated with settled.
+  const [positionsSettled, setPositionsSettled] = useState(false);
+  const settleArmed = useRef(false);
   const [borderY, setBorderY] = useState(URL_STATE_DEFAULTS.div);
 
   const [mapX, setMapX] = useState(URL_STATE_DEFAULTS.mpx);
@@ -174,7 +187,9 @@ export default function Home({ states, locations, events, onCompleted, onError }
   }, 300), []);
   useEffect(() => () => syncUrl.cancel(), [syncUrl]);
 
-  useEffect(() => {
+  // A layout effect, not a passive one: as a passive effect the map painted at the
+  // defaults and then jumped to the restored pan/zoom a frame later.
+  useIsomorphicLayoutEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const read = (key) => {
       const raw = params.get(key);
@@ -193,15 +208,99 @@ export default function Home({ states, locations, events, onCompleted, onError }
   }, []);
 
   // Scroll containers are restored once, from the URL, rather than being written back
-  // on every timeX change (which fed the scroll handler its own output).
-  useEffect(() => {
+  // on every timeX change (which fed the scroll handler its own output). A layout effect
+  // so the restored offset is in place before the first paint.
+  useIsomorphicLayoutEffect(() => {
+    if (settleArmed.current) return;
+    // No width means the very first commit, when the section heights are still NaN.
+    if (!width || !height || !timelineRef.current || !numberLineRef.current) return;
+
     const target = pendingScrollRestore.current;
-    if (!target || !width || !timelineRef.current || !numberLineRef.current) return;
-    pendingScrollRestore.current = null;
-    timelineRef.current.scrollLeft = target.x;
-    timelineRef.current.scrollTop = target.y;
-    numberLineRef.current.scrollLeft = target.x;
+    if (target) {
+      pendingScrollRestore.current = null;
+      timelineRef.current.scrollLeft = target.x;
+      timelineRef.current.scrollTop = target.y;
+      numberLineRef.current.scrollLeft = target.x;
+    }
+
+    // Positions count as final once that write has round-tripped. It deliberately does
+    // not set echoGuard, so it emits a real scroll event; queueScroll defers that one
+    // frame to commitScroll, and commitScroll's setTimeX needs one more to paint. Armed
+    // through a ref because this effect has no dependency array - a cancel-and-restart
+    // pattern here would be starved by the very commit it is waiting for.
+    settleArmed.current = true;
+    requestAnimationFrame(() => requestAnimationFrame(() => setPositionsSettled(true)));
   });
+
+  // The load reveal. Two machines, not one: the timeline's events come from
+  // getStaticProps and are ready immediately, so making them wait on the map's ~1.1MB
+  // of GeoJSON would leave a bare grid on screen for no reason.
+  //
+  // Three phases rather than a boolean because each does a distinct job. 'idle' holds
+  // the animating content at opacity 0 - without it, content paints at full opacity and
+  // then restarts from zero, which is a worse flash than the one being fixed. 'done'
+  // removes the marker class, and that removal is the whole reason the animations do
+  // not re-fire: the timeline virtualises on scroll, so cards mount and unmount
+  // constantly, and a mount-triggered animation would otherwise replay forever.
+  const [mapIntro, setMapIntro] = useState('idle');
+  const [tlIntro, setTlIntro] = useState('idle');
+
+  useEffect(() => {
+    if (mapIntro !== 'idle' || !positionsSettled || !mapBaseDrawn) return undefined;
+    // One frame of slack: on a warm re-navigation the GeoJSON is already cached, so
+    // useMapBaseDrawn is true at useState init while the d3 draw rAF has yet to run.
+    const frame = requestAnimationFrame(() => setMapIntro('running'));
+    return () => cancelAnimationFrame(frame);
+  }, [mapIntro, positionsSettled, mapBaseDrawn]);
+
+  useEffect(() => {
+    if (tlIntro !== 'idle' || !positionsSettled) return undefined;
+    const frame = requestAnimationFrame(() => setTlIntro('running'));
+    return () => cancelAnimationFrame(frame);
+  }, [tlIntro, positionsSettled]);
+
+  // Long enough for the slowest animation plus its sweep delay, with margin for the
+  // dynamically imported pin and state SVGs landing a beat late.
+  useEffect(() => {
+    if (mapIntro !== 'running') return undefined;
+    const timer = setTimeout(() => setMapIntro('done'), 1200);
+    return () => clearTimeout(timer);
+  }, [mapIntro]);
+
+  useEffect(() => {
+    if (tlIntro !== 'running') return undefined;
+    const timer = setTimeout(() => setTlIntro('done'), 1000);
+    return () => clearTimeout(timer);
+  }, [tlIntro]);
+
+  // Horizontal position across the viewport, 0 at the left edge and 1 at the right,
+  // turned into an animation-delay so content arrives as a wave rather than a cut.
+  // Only emitted while the intro is live: timeX changes every scroll frame, and leaving
+  // the property in would churn inline styles forever for no benefit.
+  const sweepDelay = useCallback((screenX) => {
+    if (!width || !Number.isFinite(screenX)) return undefined;
+    const fraction = Math.min(Math.max(screenX / width, 0), 1);
+    // Spread into a style literal rather than written as a key: a custom property is not
+    // in React.CSSProperties, and a spread is exempt from excess-property checking.
+    return { '--sweep': `${(fraction * 0.18).toFixed(3)}s` } as React.CSSProperties;
+  }, [width]);
+
+  // Map items are positioned in map space, which is panned and scaled under the pane.
+  const mapSweep = useCallback((x) => (
+    mapIntro === 'done' ? undefined : sweepDelay(x * mapScale + mapX)
+  ), [mapIntro, sweepDelay, mapScale, mapX]);
+
+  const tlSweep = useCallback((x) => (
+    tlIntro === 'done' ? undefined : sweepDelay(x - timeX)
+  ), [tlIntro, sweepDelay, timeX]);
+
+  // Nothing above can fail today, but the intro holds content at opacity 0 until this
+  // flips, so a thrown ref must never be able to strand the page invisible.
+  useEffect(() => {
+    if (positionsSettled) return undefined;
+    const timer = setTimeout(() => setPositionsSettled(true), 1200);
+    return () => clearTimeout(timer);
+  }, [positionsSettled]);
 
 
   // Mirror interaction state into the URL once scrolling settles.
@@ -890,11 +989,11 @@ export default function Home({ states, locations, events, onCompleted, onError }
       </h1>
       {/* MAP */}
 
-      <section id={`map`} className={mapStyles.map} onWheel={onMapScroll} style={{height:`${(height - 64) * borderY}px`}}>
+      <section id={`map`} className={`${mapStyles.map} ${introMarker(mapIntro, 'mapline-intro')}`} onWheel={onMapScroll} style={{height:`${(height - 64) * borderY}px`}}>
         <svg width={'10rem'} height={'100%'} style={{background:`linear-gradient(90deg, rgba(0,0,0,0.8), transparent)`,zIndex:109}}></svg>
         <Image className={mapStyles.compass} src="/images/compass.png" height={256} width={256} alt="" style={{height:`${compassDimensions(height, borderY)}px`,width:`${compassDimensions(height, borderY)}px`,
             top:`calc(${((height - 64) * borderY)}px - ${compassDimensions(height, borderY)}px - 1.2rem)`}}/>
-        <MapGridSkeleton hidden={mapDataReady} />
+        <MapGridSkeleton hidden={mapIntro !== 'idle'} />
         <DraggableCore onDrag={(e, data) => {onMapDrag(data)}} onStart={() => setIsDragging(true)} onStop={() => setIsDragging(false)}>
           <div onMouseMove={onMapMouseMove} style={{position:"absolute",width:"100%",height:"100%",zIndex:100,transform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,WebkitTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,
               msTransform:`translate(${mapX}px, ${mapY}px) scale(${mapScale})`,transformOrigin:"top left",WebkitTransformOrigin:"top left",msTransformOrigin:"top left"}}
@@ -915,22 +1014,22 @@ export default function Home({ states, locations, events, onCompleted, onError }
             
             {(mapScale < 0.6) ? (
               <>
-                <LowProjectionLCC width={8000} height={7000} style={{zIndex:'-50',left:-2800,top:-3100}}/>
-                <LowTopProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${mapScale < 0.6 ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+                <LowProjectionLCC className={mapStyles.mapLayer} width={8000} height={7000} style={{zIndex:'-50',left:-2800,top:-3100}}/>
+                <LowTopProjectionLCC className={mapStyles.mapLayer} width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${mapScale < 0.6 ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
               </>
             ) : (
               <>
-                <MediumProjectionLCC width={8000} height={7000} style={{zIndex:'-50',pointerEvents:'none',left:-2800,top:-3100}}/>
-                <MediumTopProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 0.6) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+                <MediumProjectionLCC className={mapStyles.mapLayer} width={8000} height={7000} style={{zIndex:'-50',pointerEvents:'none',left:-2800,top:-3100}}/>
+                <MediumTopProjectionLCC className={mapStyles.mapLayer} width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 0.6) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
                 {(mapScale > 4) ? (
-                  <HighTopLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${mapScale > 4 ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+                  <HighTopLabelProjectionLCC className={mapStyles.mapLayer} width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${mapScale > 4 ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
                 ) : (
                   (mapScale >= 1.5) && (
-                    <MediumTopLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 1.5 && mapScale <= 4) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+                    <MediumTopLabelProjectionLCC className={mapStyles.mapLayer} width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 1.5 && mapScale <= 4) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
                   )
                 )}
                 {(mapScale >= 3) && (
-                  <MediumTopRiverLabelProjectionLCC width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 3) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
+                  <MediumTopRiverLabelProjectionLCC className={mapStyles.mapLayer} width={8000} height={7000} style={{transition:`opacity 0.5s linear`,opacity:`${(mapScale >= 3) ? 1 : 0}`,zIndex:'110',pointerEvents:'none',left:-2800,top:-3100}}/>
                 )}
               </>
             )}
@@ -962,7 +1061,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
             {locations.map((location, index) => (((locationFoundDates[index] <= timeYear) &&
                 ((location.size == 5) || (location.size == 4 && mapScale > 0.4) || (location.size == 3 && mapScale > 1) || (location.size == 2 && mapScale > 1.7) || (location.size == 1 && mapScale > 2.5))) || (location.id == locSel)) && (
               <React.Fragment key={location.id ?? index}>
-                <div style={{transformOrigin:`top left`,transform:`scale(${(location.size / 10 + 0.3) / mapScale + 0.1})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:115,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
+                <div style={{...mapSweep(latLonToX(location.lat, location.long)),transformOrigin:`top left`,transform:`scale(${(location.size / 10 + 0.3) / mapScale + 0.1})`,pointerEvents:'none',position:'absolute',width:'13rem',zIndex:115,left:`${latLonToX(location.lat, location.long)}px`,top:`${latLonToY(location.lat, location.long)}px`}}>
                   <div className={`${mapStyles.locationDot}`} style={{opacity:(locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) || locSel == location.id) ? 1 : (0.3 + (location.size / 10))}}></div>
                   <span className={`${mapStyles.locationLabel} ${(!locHoverNear(latLonToX(location.lat, location.long), latLonToY(location.lat, location.long)) && locSel != location.id) && mapStyles.locationLabelHidden}`}>{location.displayName}</span>
                 </div>
@@ -971,7 +1070,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
             {events.map((event, i) => ((getLocX(event) != null && event.location != null && (eventVisible(event) || event.id == eventSelected || eventsOpen.find(e => e == event.id) != null)) &&
               ((eventsAtLocLen(event) <= 1 || event.id == eventSelected) ? (
-                <MapSvg key={event.id ?? i} className={`${timelineStyles.eventsp} ${timelineStyles[event.category + 'p']} ${eventSelected == event.id && timelineStyles.selectedPin}`} width={40} height={30} style={{transformOrigin:`bottom center`,
+                <MapSvg key={event.id ?? i} className={`${timelineStyles.eventsp} ${timelineStyles[event.category + 'p']} ${eventSelected == event.id && timelineStyles.selectedPin}`} width={40} height={30} style={{...mapSweep(getLocX(event)),transformOrigin:`bottom center`,
                     transform:`translate(${getLocX(event)}px, ${getLocY(event)}px) scale(${(0.9 / mapScale + 0.1) * (eventSelected == event.id ? 1.3 : 1)})`}}
                     name={'pin'} onCompleted={onCompleted} onError={onError} onMouseDownCapture={mapMouseDown}
                     onMouseUpCapture={(e) => {
@@ -983,7 +1082,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
                 />
               ) : (
                 ((indexAtLoc(event) == 0) && (event.location != eventFromId(eventSelected)?.location)) && (
-                  <div key={event.id ?? i} className={`${timelineStyles.eventspMulti} ${locSel == event.location && timelineStyles.selectedPin}`} style={{transformOrigin:`bottom center`,
+                  <div key={event.id ?? i} className={`${timelineStyles.eventspMulti} ${locSel == event.location && timelineStyles.selectedPin}`} style={{...mapSweep(getLocX(event)),transformOrigin:`bottom center`,
                         transform:`translate(${getLocX(event)}px, ${getLocY(event)}px) scale(${(0.9 / mapScale + 0.1) * (locSel == event.location ? 1.3 : 1)})`}}>
                     <MapSvg className={`${timelineStyles[event.category + 'p']}`} width={40} height={30}
                         style={{top:-30,left:-20}}
@@ -1186,11 +1285,11 @@ export default function Home({ states, locations, events, onCompleted, onError }
           tabIndex={0} role="region" aria-label="Timeline of events. Use the arrow keys to move between events and Enter to open one."
           onKeyDown={onTimelineKeyDown}
           style={{height:`calc(${height - ((height - 64) * borderY)}px - 7.1rem)`,position:'absolute'}}>
-        <div style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`,overflow:'hidden'}} onMouseUpCapture={() => {if(!isDragging) { eventClick(null); setLocSel(null); }}}>
+        <div className={introMarker(tlIntro, 'mapline-tl')} style={{position:"absolute",top:0,height:`${timeLimY}px`,width:`calc(${timeLimX}px - 0.9rem)`,overflow:'hidden'}} onMouseUpCapture={() => {if(!isDragging) { eventClick(null); setLocSel(null); }}}>
           {visibleTimelineEvents.map(({ event, index: i }) => (
             (
               (!event.period) ? (
-                <div key={event.id ?? i} style={{zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>
+                <div key={event.id ?? i} style={{...tlSweep(getEventX(event)),zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>
 
                   <HoverVisibleDiv $length={labelWidth(measuredWidths.current.events[i], event?.endDate)} $opacity={(event.importance / 9) + 0.4} 
                         $isParent={isListedAsParent(event.id)} $expanded={(event?.parent ? (isParentSelected(event.parent)) : true)} $corners={event?.endDate} $isChild={event?.parent} 
@@ -1250,7 +1349,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
                 </div>
               ) : (
-                <div key={event.id ?? i} style={{zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>
+                <div key={event.id ?? i} style={{...tlSweep(getEventX(event)),zIndex:50}} className={timelineStyles.eventDiv} onClick={(e) => e.stopPropagation()}>
 
                   <div className={`${timelineStyles.period} ${timelineStyles[event.category + 'Period']} ${event.id == eventSelected && timelineStyles.selectedPeriod}`} style={{width:`calc(${timeScale * eventSpan(event)}px + 2rem)`,
                       height:'29px',transform:`translate(calc(${getEventX(event)}px - 1rem), calc(${getEventY(event)}px + 0.1rem))`,

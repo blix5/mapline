@@ -830,3 +830,87 @@
     outline: 0.15rem solid #E9EAF3;
     outline-offset: 0.1rem;
 }
+
+/* ---- Load reveal: map pins --------------------------------------------------------
+   These live inside #map, so they answer to the map's marker class even though they are
+   styled from this file. */
+:global(.mapline-intro-pending) .eventsp,
+:global(.mapline-intro-pending) .eventspMulti,
+:global(.mapline-intro-pending) .eventspLabel {
+    opacity: 0;
+    transition: none;
+}
+
+:global(.mapline-intro-run) .eventsp,
+:global(.mapline-intro-run) .eventspMulti {
+    animation: introPinRise 0.45s cubic-bezier(0.16, 1, 0.3, 1) calc(0.18s + var(--sweep, 0s)) backwards;
+}
+:global(.mapline-intro-run) .eventspLabel {
+    animation: introRiseFlat 0.45s cubic-bezier(0.16, 1, 0.3, 1) calc(0.18s + var(--sweep, 0s)) backwards;
+}
+
+@keyframes introPinRise {
+    from {
+        opacity: 0;
+        translate: 0 0.5rem;
+        /* drop-shadow first, blur second. The implicit 100% is this element's own
+           single-function drop-shadow filter, and a filter list only interpolates
+           continuously when the shorter list is a prefix of the longer one. Putting
+           blur() first would make this a discrete snap at the halfway point. */
+        filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.15)) blur(0.12rem);
+        -webkit-filter: drop-shadow(0 0 0.2rem rgba(0,0,0,0.15)) blur(0.12rem);
+    }
+}
+
+/* ---- Load reveal: timeline cards --------------------------------------------------
+   Scoped to the scroll wrapper, which also keeps the search-results panel untouched -
+   it reuses .events but sits outside #timeline. */
+:global(.mapline-tl-pending) .events,
+:global(.mapline-tl-pending) .eventsl,
+:global(.mapline-tl-pending) .period,
+:global(.mapline-tl-pending) .periodText {
+    opacity: 0;
+    transition: none;
+}
+
+:global(.mapline-tl-run) .events {
+    animation: introCardRise 0.45s cubic-bezier(0.16, 1, 0.3, 1) var(--sweep, 0s) backwards;
+}
+:global(.mapline-tl-run) .eventsl,
+:global(.mapline-tl-run) .period,
+:global(.mapline-tl-run) .periodText {
+    animation: introRiseFlat 0.45s cubic-bezier(0.16, 1, 0.3, 1) var(--sweep, 0s) backwards;
+}
+
+@keyframes introCardRise {
+    from {
+        opacity: 0;
+        translate: 0 0.6rem;
+        /* Function order mirrors HoverVisibleDiv's stack exactly (blur, drop-shadow,
+           brightness) so the implicit 100% interpolates continuously, including for the
+           dimmed and pre-blurred child events. */
+        filter: blur(0.18rem) drop-shadow(0 0 0.3rem rgba(0,0,0,0.5)) brightness(1);
+        -webkit-filter: blur(0.18rem) drop-shadow(0 0 0.3rem rgba(0,0,0,0.5)) brightness(1);
+    }
+}
+
+/* No filter here: these elements have no base filter to interpolate against, so adding
+   one would be a discrete snap rather than a fade. */
+@keyframes introRiseFlat {
+    from {
+        opacity: 0;
+        translate: 0 0.6rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :global(.mapline-intro-run) .eventsp,
+    :global(.mapline-intro-run) .eventspMulti,
+    :global(.mapline-intro-run) .eventspLabel,
+    :global(.mapline-tl-run) .events,
+    :global(.mapline-tl-run) .eventsl,
+    :global(.mapline-tl-run) .period,
+    :global(.mapline-tl-run) .periodText {
+        animation: none;
+    }
+}

@@ -23,7 +23,13 @@
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.4s ease, visibility 0.4s ease;
+    /* Outside the transition list on purpose. The opaque ground is what read as a
+       deliberate dark flash: the shapes unmounted the moment the route completed and
+       this panel went on fading alone over the page that had already mounted
+       underneath. Dropping it here means the ground goes on the same frame the real
+       page arrives, and only the skeleton shapes cross-fade over it. */
+    background-color: transparent;
+    transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
 }
 
 /* A text-shaped or box-shaped placeholder. Callers set width/height to match the real

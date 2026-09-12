@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import skeleton from '../../styles/skeleton.module.css';
 import utilStyles from '../../styles/utils.module.css';
 import SourcesSkeleton from './SourcesSkeleton';
@@ -11,6 +11,11 @@ type Props = { navigatingTo: string | null };
 // skeleton in that window is a flash, not a loading state, so hold it back briefly -
 // the usual "no spinner for sub-200ms loads" rule.
 const PAINT_DELAY_MS = 140;
+
+// Must match the fade in .hidden. The shapes stay mounted for this long after the route
+// completes so they dissolve over the real page instead of being yanked, which left the
+// overlay's ground fading on its own and read as an intentional dark flash.
+const FADE_MS = 300;
 
 function skeletonFor(path: string) {
   switch (path) {
@@ -35,18 +40,40 @@ function labelFor(path: string) {
 // _app), but the placeholder now has the shape of the page that is arriving.
 export default function RouteSkeleton({ navigatingTo }: Props) {
   const [painted, setPainted] = useState(false);
+  const [lingering, setLingering] = useState(false);
+  // Mirrors `painted` so the effect can branch on it without taking it as a dependency:
+  // re-running this effect on every paint change would restart the fade timer.
+  const paintedRef = useRef(false);
+  // The destination outlives `navigatingTo`, which is nulled the instant the route
+  // completes - the shapes need to know what they were still drawing while they fade.
+  const lastPath = useRef('/');
 
   useEffect(() => {
     if (navigatingTo === null) {
+      if (!paintedRef.current) {
+        setLingering(false);
+        return undefined;
+      }
+      paintedRef.current = false;
       setPainted(false);
-      return;
+      setLingering(true);
+      const timer = setTimeout(() => setLingering(false), FADE_MS);
+      return () => clearTimeout(timer);
     }
-    const timer = setTimeout(() => setPainted(true), PAINT_DELAY_MS);
+    lastPath.current = navigatingTo.split('?')[0];
+    setLingering(false);
+    const timer = setTimeout(() => {
+      paintedRef.current = true;
+      setPainted(true);
+    }, PAINT_DELAY_MS);
     return () => clearTimeout(timer);
   }, [navigatingTo]);
 
   const visible = navigatingTo !== null && painted;
-  const path = navigatingTo ? navigatingTo.split('?')[0] : '/';
+  // Kept mounted through the fade-out; `visible` still drives the aria state, so a
+  // screen reader hears the same thing at the same time as before.
+  const mounted = visible || lingering;
+  const path = navigatingTo ? navigatingTo.split('?')[0] : lastPath.current;
 
   return (
     <div
@@ -61,7 +88,7 @@ export default function RouteSkeleton({ navigatingTo }: Props) {
         {visible ? labelFor(path) : 'Ready'}
       </span>
       <div aria-hidden="true" style={{ height: '100%' }}>
-        {visible && skeletonFor(path)}
+        {mounted && skeletonFor(lastPath.current)}
       </div>
     </div>
   );

@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+
+// useLayoutEffect warns during SSR; fall back to useEffect on the server. Reading the
+// size in a layout effect rather than a passive one means width/height are defined on
+// the first *painted* commit - as a passive effect it left one frame where they were
+// undefined and every calc(${height - 64}px) on the map and timeline was NaN.
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 type WindowDimentions = {
     width: number | undefined;
@@ -12,7 +18,7 @@ const useWindowDimensions = (): WindowDimentions => {
     });
     const frame = useRef<number | null>(null);
 
-    useEffect(() => {
+    useIsomorphicLayoutEffect(() => {
         // Coalesce resize events to one update per frame, and keep the previous object
         // when the size has not actually changed so React can bail out of the render.
         function read(): void {

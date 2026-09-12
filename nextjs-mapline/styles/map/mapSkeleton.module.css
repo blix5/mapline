@@ -11,15 +11,16 @@
     z-index: 105; /* over the ocean and map layers, under the compass (110) */
     pointer-events: none;
     /* Two hairline gradients rather than an SVG pattern: no extra element to lay out,
-       and it stays crisp at any pane size. #333443 at low alpha reads as a graticule
-       against the #4B5B96 ocean without competing with the coastline that replaces it. */
+       and it stays crisp at any pane size. Light ink (#E9EAF3, the app's foreground) at
+       7% rather than a dark one: drawn dark it read as an artifact sitting *over* the
+       water, where this reads as a graticule drawn *on* it. */
     background-image:
-        repeating-linear-gradient(to right, rgba(51, 52, 67, 0.45) 0 1px, transparent 1px 56px),
-        repeating-linear-gradient(to bottom, rgba(51, 52, 67, 0.45) 0 1px, transparent 1px 56px);
+        repeating-linear-gradient(to right, rgba(233, 234, 243, 0.07) 0 1px, transparent 1px 56px),
+        repeating-linear-gradient(to bottom, rgba(233, 234, 243, 0.07) 0 1px, transparent 1px 56px);
     /* Static, not pulsing: a graticule is chrome, not a busy indicator. Its only motion
        is the fade-out below. */
     opacity: 1;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Fade out only - matching the outgoing overlay's instant-show / faded-hide pattern.

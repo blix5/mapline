@@ -57,6 +57,34 @@ const markReady = () => {
   readyListeners.clear();
 };
 
+// useMapDataReady answers "has some file arrived", which is not the same question as
+// "is there a map on screen": it flips on whichever URL resolves first regardless of
+// tier, and every projection below builds its paths with d3 inside a rAF, so the <svg>
+// is still empty at that moment. The intro reveal needs the stronger signal, and only
+// the draw callback itself can give it.
+let baseDrawn = false;
+const baseDrawnListeners = new Set();
+const markBaseDrawn = () => {
+  if (baseDrawn) return;
+  baseDrawn = true;
+  baseDrawnListeners.forEach((notify) => notify());
+  baseDrawnListeners.clear();
+};
+
+export const useMapBaseDrawn = () => {
+  const [drawn, setDrawn] = useState(baseDrawn);
+  useEffect(() => {
+    if (baseDrawn) {
+      setDrawn(true);
+      return undefined;
+    }
+    const notify = () => setDrawn(true);
+    baseDrawnListeners.add(notify);
+    return () => { baseDrawnListeners.delete(notify); };
+  }, []);
+  return drawn;
+};
+
 export const useMapDataReady = () => {
   const [ready, setReady] = useState(firstTierResolved);
   useEffect(() => {
@@ -168,6 +196,8 @@ export const LowProjectionLCC = ({ width, height, ...rest }) => {
       
       renderPaths(svg, lowLandData, path, mapStyles.lccLand);
       renderPaths(svg, lowLakeData, path, mapStyles.lccWater);
+      // Last statement: the paths are in the DOM now, which is what the reveal waits for.
+      markBaseDrawn();
     };
 
     const handle = requestAnimationFrame(updateMap);
@@ -214,6 +244,8 @@ export const MediumProjectionLCC = ({ width, height, ...rest }) => {
       
       renderPaths(svg, mediumLandData, path, mapStyles.lccLand);
       renderPaths(svg, mediumLakeData, path, mapStyles.lccWater);
+      // Last statement: the paths are in the DOM now, which is what the reveal waits for.
+      markBaseDrawn();
     };
 
     const handle = requestAnimationFrame(updateMap);
