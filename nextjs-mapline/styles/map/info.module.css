@@ -209,6 +209,15 @@
     pointer-events: auto;
 }
 
+/* The actual hover fill on this icon is painted by timeline.module.css, which has seven
+   per-category `.<category>Tab svg:hover` rules setting an opaque background-color and
+   fill directly on the <svg>. That background sits on top of the button's own, so it is
+   the shape you actually see - and it was square. The svg is 18x18, so rounding it makes
+   that fill a circle. Rounded unconditionally: it is a no-op when no background is set. */
+.infoBoxClose svg {
+    border-radius: 100%;
+}
+
 .infoBoxClose:hover,
 .infoBoxClose:focus-visible {
     background-color: rgba(255, 255, 255, 0.25);
