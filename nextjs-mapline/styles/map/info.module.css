@@ -197,7 +197,7 @@
     opacity: 0;
     pointer-events: none;
     border-radius: 100%;
-    transition: opacity 0.3s ease, background-color 0.3s ease;
+    transition: opacity 0.3s ease;
     margin: 0;
 }
 
@@ -218,10 +218,6 @@
     border-radius: 100%;
 }
 
-.infoBoxClose:hover,
-.infoBoxClose:focus-visible {
-    background-color: rgba(255, 255, 255, 0.25);
-}
 .infoBoxClose:focus-visible {
     outline: 0.15rem solid #E9EAF3;
     outline-offset: -0.15rem;
