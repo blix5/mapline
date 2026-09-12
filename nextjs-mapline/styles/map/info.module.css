@@ -182,12 +182,20 @@
     line-height: 0;
 
     /* Explicitly square, because border-radius:100% on the old ~16x18 box drew an
-       ellipse. 1.4rem still fits inside .infoBoxTabs' 1.5rem height. */
-    width: 1.4rem;
-    height: 1.4rem;
+       ellipse. Sized a little under .infoBoxTabs' 1.5rem so the disc reads as a chip
+       sitting in the tab rather than filling its whole height. */
+    width: 1.15rem;
+    height: 1.15rem;
+
+    /* A visible disc, not a tint. This was rgba(255,255,255,0.25) over a tab whose own
+       background is rgba(255,255,255,0.2) - geometrically a circle, but a 5% difference
+       against the tab, so there was no shape to see. Dark reads against both the
+       translucent-white selected tab and the light category colour on hover. */
+    background-color: rgba(0, 0, 0, 0.45);
 
     position: absolute;
-    left: calc(100% - 1.5rem);
+    /* Right edge lands on the tab's 0.2rem padding: 100% - (0.2rem + 1.15rem width). */
+    left: calc(100% - 1.35rem);
     /* Plus, not minus. top:50% resolves against .infoBoxTab's padding box, and the tab
        has a border-bottom but no border-top - so that box is short by 0.1rem only at the
        bottom, putting its midpoint 0.05rem above the tab's visual centre. */
@@ -201,6 +209,19 @@
     margin: 0;
 }
 
+/* Overrides the width/height attributes on the imported svg. A smaller glyph leaves a
+   ring of background around it, which is what actually makes the disc legible as round.
+
+   Scoped through .infoBoxTab for specificity, not vanity: timeline.module.css sets
+   `.<category>Tab svg { fill: <category colour> }`, which is the same (0,1,1) as a bare
+   `.infoBoxClose svg` and loads later, so it would win on source order and leave a dark
+   gold glyph on a dark disc. */
+.infoBoxTab .infoBoxClose svg {
+    width: 0.58rem;
+    height: 0.58rem;
+    fill: #E9EAF3;
+}
+
 /* focus-within as well as hover: the button carries a real aria-label but was
    pointer-events:none until hover, so it could not be reached by keyboard at all. */
 .infoBoxTab:hover .infoBoxClose,
@@ -211,7 +232,7 @@
 
 .infoBoxClose:hover,
 .infoBoxClose:focus-visible {
-    background-color: rgba(255, 255, 255, 0.25);
+    background-color: rgba(0, 0, 0, 0.75);
 }
 .infoBoxClose:focus-visible {
     outline: 0.15rem solid #E9EAF3;
