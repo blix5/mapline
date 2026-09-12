@@ -56,6 +56,10 @@ export async function getStaticProps(context) {
 // useLayoutEffect warns during SSR; fall back to useEffect on the server.
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
+// Same shape as the query string, so a nav back to a bare "/" can restore from here and
+// the merge is one fallback per key. Session-scoped: a visit tomorrow starts clean.
+const VIEW_STORAGE_KEY = 'mapline:view:v1';
+
 // Keys mirrored into the query string, and the defaults used before restore.
 const URL_STATE_DEFAULTS = {
   div: 0.6,
@@ -101,7 +105,7 @@ const labelWidth = (measured, hasEndDate) => {
 
 export default function Home({ states, locations, events, onCompleted, onError }) {
   const startYear = 1480;
-  const endYear = 2020;
+  const endYear = 2024;
 
   const [inHidden, setInHidden] = useState(-1);
   const { width, height } = useWindowDimensions();
@@ -175,36 +179,145 @@ export default function Home({ states, locations, events, onCompleted, onError }
   // after mount rather than in the useState initialisers so SSR hydration still matches.
   const urlRestored = useRef(false);
   const pendingScrollRestore = useRef(null);
+  // Seeded by the restore below and read by the effect that builds `parents`, which runs
+  // later and would otherwise hardcode every entry back to collapsed.
+  const restoredExpanded = useRef(null);
+  // Suppresses exactly one run of the effect that auto-opens a tab for the selected event.
+  const skipAutoOpen = useRef(false);
+  // The latest view, mirrored synchronously so the unmount flush has something to write
+  // that is not stuck behind the debounce.
+  const viewRef = useRef(null);
+
   const syncUrl = useMemo(() => debounce((next) => {
     const params = new URLSearchParams(window.location.search);
     Object.keys(next).forEach((key) => {
       const value = next[key];
-      if (value == null || !Number.isFinite(value)) return;
-      params.set(key, String(Math.round(value * 1000) / 1000));
+      if (Array.isArray(value)) {
+        if (value.length === 0) params.delete(key); else params.set(key, value.join(','));
+      } else if (typeof value === 'string') {
+        if (value === '') params.delete(key); else params.set(key, value);
+      } else if (value == null) {
+        // Deleting, not skipping: clearing a selection used to leave its param behind.
+        params.delete(key);
+      } else if (Number.isFinite(value)) {
+        params.set(key, String(Math.round(value * 1000) / 1000));
+      }
+      // A non-null, non-finite number falls through unwritten, keeping the last good value.
     });
+    const query = params.toString();
     // replaceState, not push: the back button should not collect a frame of scrolling.
-    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+    window.history.replaceState(null, '', query ? `${window.location.pathname}?${query}` : window.location.pathname);
   }, 300), []);
+  // cancel, deliberately not flush: at unmount during a route change the router has
+  // already moved on, so flushing would stamp the map's query onto /about. The
+  // last-write-wins problem is handled by the storage flush instead, which is
+  // path-independent and therefore safe.
   useEffect(() => () => syncUrl.cancel(), [syncUrl]);
+
+  const writeView = useCallback((view) => {
+    if (!view) return;
+    // sessionStorage throws on access in Safari private browsing and wherever site data
+    // is blocked. Persistence is a convenience; it must never take the page down.
+    try { window.sessionStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify({ v: 1, ...view })); }
+    catch { /* storage unavailable - fall back to the URL alone */ }
+  }, []);
+  const persistView = useMemo(() => debounce(writeView, 300), [writeView]);
+
+  useEffect(() => {
+    const flush = () => writeView(viewRef.current);
+    // pagehide rather than beforeunload: it also fires for bfcache eviction.
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      persistView.cancel();
+      flush();
+    };
+  }, [persistView, writeView]);
 
   // A layout effect, not a passive one: as a passive effect the map painted at the
   // defaults and then jumped to the restored pan/zoom a frame later.
   useIsomorphicLayoutEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const read = (key) => {
+    const readNum = (key) => {
       const raw = params.get(key);
       if (raw === null) return null;
       const parsed = Number(raw);
       return Number.isFinite(parsed) ? parsed : null;
     };
+    const readStr = (key) => params.get(key);
+    const readList = (key) => {
+      const raw = params.get(key);
+      return raw === null ? null : raw.split(',').filter(Boolean);
+    };
+
+    // The nav links are plain hrefs with no query, so coming back from /about lands on a
+    // bare "/" and the URL has nothing to say. Storage covers that case, and the logo
+    // link, and reload. A shared link still wins wherever it carries a value.
+    let stored = null;
+    try {
+      const raw = window.sessionStorage.getItem(VIEW_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed && parsed.v === 1) stored = parsed;
+    } catch { /* unavailable or corrupt - the URL is still authoritative */ }
+
+    const num = (key) => readNum(key) ?? (Number.isFinite(stored?.[key]) ? stored[key] : null);
+    const str = (key) => readStr(key) ?? (typeof stored?.[key] === 'string' ? stored[key] : null);
+    const list = (key) => readList(key) ?? (Array.isArray(stored?.[key]) ? stored[key] : []);
+
     const setters = { div: setBorderY, mpx: setMapX, mpy: setMapY, mps: setMapScale,
                       tpx: setTimeX, tpy: setTimeY, tps: setTimeScale, year: setTimeYear };
     Object.keys(setters).forEach((key) => {
-      const value = read(key);
+      const value = num(key);
       if (value !== null) setters[key](value);
     });
-    pendingScrollRestore.current = { x: read('tpx') ?? URL_STATE_DEFAULTS.tpx, y: read('tpy') ?? URL_STATE_DEFAULTS.tpy };
+
+    // Validated against the props rather than the eventsById/statesById memos: those are
+    // declared below this effect, so reading them here would tie correctness to the order
+    // of declarations in the file. Ids come from a live sheet, so a stored id can simply
+    // stop existing between builds.
+    const eventIds = new Set(events.map((event) => event?.id).filter(Boolean));
+    const placeIds = new Set([...states.map((state) => state?.id),
+                              ...locations.map((location) => location?.id)].filter(Boolean));
+
+    const restoredOpen = list('open').filter((id) => eventIds.has(id));
+    const rawEv = str('ev');
+    const restoredEv = rawEv !== null && eventIds.has(rawEv) ? rawEv : null;
+    const rawTab = str('tab');
+    const restoredTab = rawTab !== null && restoredOpen.includes(rawTab)
+      ? rawTab
+      : (restoredEv !== null && restoredOpen.includes(restoredEv) ? restoredEv : (restoredOpen[0] ?? null));
+    const rawLoc = str('loc');
+    const restoredLoc = rawLoc !== null && placeIds.has(rawLoc) ? rawLoc : null;
+
+    if (restoredOpen.length) setEventsOpen(restoredOpen);
+    if (restoredEv !== null) setEventSelected(restoredEv);
+    if (restoredTab !== null) setEventOpenSelected(restoredTab);
+    if (restoredLoc !== null) setLocSel(restoredLoc);
+    // Not setParents: that effect runs later and rebuilds the list from scratch.
+    restoredExpanded.current = new Set(list('exp'));
+
+    // Only skip the auto-open effect when the restore is self-consistent. A hand-written
+    // ?ev=x with no open/tab should still behave like a click and open the panel.
+    skipAutoOpen.current = restoredEv !== null && restoredOpen.includes(restoredEv) && restoredTab !== null;
+
+    pendingScrollRestore.current = { x: num('tpx') ?? URL_STATE_DEFAULTS.tpx, y: num('tpy') ?? URL_STATE_DEFAULTS.tpy };
     urlRestored.current = true;
+
+    // Stamp the merged view into the address bar now rather than waiting out the sync
+    // debounce, so a nav back from /about does not show a bare "/" for 300ms.
+    const merged = { div: num('div'), mpx: num('mpx'), mpy: num('mpy'), mps: num('mps'),
+                     tpx: num('tpx'), tpy: num('tpy'), tps: num('tps'), year: num('year'),
+                     ev: restoredEv, open: restoredOpen, tab: restoredTab, loc: restoredLoc,
+                     exp: list('exp') };
+    const stamped = new URLSearchParams();
+    Object.keys(merged).forEach((key) => {
+      const value = merged[key];
+      if (Array.isArray(value)) { if (value.length) stamped.set(key, value.join(',')); }
+      else if (typeof value === 'string') { if (value) stamped.set(key, value); }
+      else if (Number.isFinite(value)) stamped.set(key, String(Math.round(value * 1000) / 1000));
+    });
+    const stampedQuery = stamped.toString();
+    if (stampedQuery) window.history.replaceState(null, '', `${window.location.pathname}?${stampedQuery}`);
   }, []);
 
   // Scroll containers are restored once, from the URL, rather than being written back
@@ -303,13 +416,6 @@ export default function Home({ states, locations, events, onCompleted, onError }
   }, [positionsSettled]);
 
 
-  // Mirror interaction state into the URL once scrolling settles.
-  useEffect(() => {
-    if (!urlRestored.current) return;
-    syncUrl({ div: borderY, mpx: mapX, mpy: mapY, mps: mapScale,
-              tpx: timeX, tpy: timeY, tps: timeScale, year: timeYear });
-  }, [syncUrl, borderY, mapX, mapY, mapScale, timeX, timeY, timeScale, timeYear]);
-
   const [eventSelected, setEventSelected] = useState(null);
   const [eventsOpen, setEventsOpen] = useState([]);
   const [eventOpenSelected, setEventOpenSelected] = useState(null);
@@ -346,12 +452,21 @@ export default function Home({ states, locations, events, onCompleted, onError }
     }
   }
   useEffect(() => {
-    if (eventSelected !== null) {
-      if(!eventsOpen.includes(eventSelected)) {
-        setEventsOpen(prevEvents => [...prevEvents, eventSelected]);
-      }
-      setEventOpenSelected(eventSelected);
+    // The null check has to come first. On mount this runs once with eventSelected still
+    // null - the restore sets state from a layout effect, so React flushes the first
+    // commit's passive effects before the restored value arrives - and if that run
+    // consumed the guard it would be spent before it was ever needed.
+    if (eventSelected === null) return;
+    if (skipAutoOpen.current) {
+      // A restored selection already has its tab strip and fronted tab; appending here
+      // would reorder the strip and override which tab was showing.
+      skipAutoOpen.current = false;
+      return;
     }
+    if (!eventsOpen.includes(eventSelected)) {
+      setEventsOpen(prevEvents => [...prevEvents, eventSelected]);
+    }
+    setEventOpenSelected(eventSelected);
   }, [eventSelected]);
   useEffect(() => {
     eventsRef.current = eventsRef.current.slice(0, events.length);
@@ -421,7 +536,15 @@ export default function Home({ states, locations, events, onCompleted, onError }
   useEffect(() => {
     const parentItems = events.map(event => event.parent).filter(parent => parent !== null && parent !== undefined);
     const uniqueParentsSet = new Set(parentItems);
-    const uniqueParents = Array.from(uniqueParentsSet).map(parent => ({ parent, expanded: false }));
+    // Seeded from the restore rather than hardcoded to false. This effect has [] deps and
+    // runs after the restore layout effect, so a setParents() in the restore path would be
+    // overwritten here a tick later. Layout effects for a commit run before passive ones,
+    // so the ref is always populated by the time this reads it. Expansion ids that no
+    // longer name a parent simply never appear in the set being mapped.
+    const uniqueParents = Array.from(uniqueParentsSet).map(parent => ({
+      parent,
+      expanded: restoredExpanded.current?.has(parent) ?? false,
+    }));
     setParents(uniqueParents);
   }, []);
   const toggleParentSelection = (parentName) => {
@@ -431,6 +554,27 @@ export default function Home({ states, locations, events, onCompleted, onError }
       )
     );
   }
+
+  const expandedIds = useMemo(
+    () => parents.filter((entry) => entry.expanded).map((entry) => entry.parent),
+    [parents],
+  );
+
+  // Mirror the view into both the URL and session storage once scrolling settles. Lives
+  // here rather than up with the other URL plumbing because its dependency array is
+  // evaluated during render, and eventSelected/eventsOpen/eventOpenSelected/locSel are all
+  // declared below that point - naming them there is a TDZ ReferenceError, not a warning.
+  useEffect(() => {
+    if (!urlRestored.current) return;
+    const view = { div: borderY, mpx: mapX, mpy: mapY, mps: mapScale,
+                   tpx: timeX, tpy: timeY, tps: timeScale, year: timeYear,
+                   ev: eventSelected, open: eventsOpen, tab: eventOpenSelected,
+                   loc: locSel, exp: expandedIds };
+    viewRef.current = view;
+    syncUrl(view);
+    persistView(view);
+  }, [syncUrl, persistView, borderY, mapX, mapY, mapScale, timeX, timeY, timeScale, timeYear,
+      eventSelected, eventsOpen, eventOpenSelected, locSel, expandedIds]);
   // ---- Derived data -------------------------------------------------------------
   // Everything here is a function of the sheet data and is recomputed only when that
   // data changes. It used to be redone per event, per render: getEventY ran a full
@@ -810,7 +954,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
 
   // --- Tick marks -----------------------------------------------------------------
   // Both rulers are a pure function of the zoom level, so they are built once per zoom
-  // and never touched again. The cull test used to read timeX, which meant all 541 years
+  // and never touched again. The cull test used to read timeX, which meant all 545 years
   // were walked and the visible ones rebuilt on every scroll frame — and, worse, the
   // window was derived from React state that lags the DOM scroll position, so a fast
   // scroll outran the ticks and they popped in late. That is what made this bar feel
@@ -979,6 +1123,11 @@ export default function Home({ states, locations, events, onCompleted, onError }
   const eventsVisibleAt = (location) => visibleByLocation.get(location) ?? [];
   const indexAtLoc = (event) => eventsVisibleAt(event.location).indexOf(event);
   const eventFromId = (eventId) => eventsById.get(eventId);
+  // Hoisted and gated on below. Ids used to come only from clicking a rendered event, so
+  // a miss was impossible; now that they also come from storage and the query string, a
+  // stale id is ordinary input - and the panel dereferenced this without optional
+  // chaining, which would have been a blank page rather than a missing panel.
+  const openEvent = eventFromId(eventOpenSelected);
   const eventsAtLocLen = (event) => eventsVisibleAt(event.location).length;
 
   return (
@@ -1152,7 +1301,7 @@ export default function Home({ states, locations, events, onCompleted, onError }
         </DraggableCore>
 
         {/* INFO */}
-        {(eventOpenSelected != null) && (
+        {(eventOpenSelected != null && openEvent) && (
           <div className={infoStyles.infoBox} style={{width:`${(((height - 64) * borderY) + (width / 4)) / 2}px`,height:`${(height - 64) * borderY}px`,left:`calc(${width}px - ${(((height - 64) * borderY) + (width / 4)) / 2}px)`}}>
             <div className={`${infoStyles.infoBoxDivBack}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}></div>
             <div className={`${infoStyles.infoBoxDiv}`} style={{width:`calc(100% - 2rem)`,height:`calc(${(height - 64) * borderY}px - 2rem)`}} onWheel={(e) => e.stopPropagation()}>
@@ -1193,33 +1342,33 @@ export default function Home({ states, locations, events, onCompleted, onError }
               </div>
 
               <div className={`${infoStyles.infoBoxDivInner} ${utilStyles.scrollable}`}>
-                <h2 className={`${infoStyles.infoBoxTitle} ${timelineStyles[eventFromId(eventOpenSelected).category + 'Text']}`} style={{fontStyle:`${eventFromId(eventOpenSelected).italics ? 'italic' : 'normal'}`}}>
-                  {eventFromId(eventOpenSelected)?.fullName || eventFromId(eventOpenSelected)?.displayName}
-                  {(eventFromId(eventOpenSelected)?.aka) && (
+                <h2 className={`${infoStyles.infoBoxTitle} ${timelineStyles[openEvent.category + 'Text']}`} style={{fontStyle:`${openEvent.italics ? 'italic' : 'normal'}`}}>
+                  {openEvent?.fullName || openEvent?.displayName}
+                  {(openEvent?.aka) && (
                     <span className={infoStyles.infoBoxAka}>
-                      A.K.A. {eventFromId(eventOpenSelected).aka}
+                      A.K.A. {openEvent.aka}
                     </span>
                   )}
                 </h2>
                 
-                <p className={`${infoStyles.infoBoxDate} ${timelineStyles[eventFromId(eventOpenSelected).category + 'Text']}`} onClick={() => eventClick(eventFromId(eventOpenSelected))}>
-                  {convertDate(String(dateFilterRender(eventFromId(eventOpenSelected)?.startDate, eventFromId(eventOpenSelected)?.specStartDate)))}
-                  {eventFromId(eventOpenSelected)?.endDate && 
-                    ` – ${convertDate(String(dateFilterRender(eventFromId(eventOpenSelected)?.endDate, eventFromId(eventOpenSelected)?.specEndDate)))}`
+                <p className={`${infoStyles.infoBoxDate} ${timelineStyles[openEvent.category + 'Text']}`} onClick={() => eventClick(openEvent)}>
+                  {convertDate(String(dateFilterRender(openEvent?.startDate, openEvent?.specStartDate)))}
+                  {openEvent?.endDate && 
+                    ` – ${convertDate(String(dateFilterRender(openEvent?.endDate, openEvent?.specEndDate)))}`
                   }
                 </p>
-                {(eventFromId(eventOpenSelected)?.location) && (
+                {(openEvent?.location) && (
                   <button type="button" className={infoStyles.infoBoxLocation}
-                      onClick={() => locationClick(eventFromId(eventOpenSelected).location)}>
-                    {isListedAsLoc(eventFromId(eventOpenSelected).location) && getLocation(eventFromId(eventOpenSelected).location)?.displayName}
-                    {isListedAsState(eventFromId(eventOpenSelected).location) && (getCurrentState(eventFromId(eventOpenSelected).location)?.displayName || oopsieDaisies(eventFromId(eventOpenSelected).location)?.displayName)}
+                      onClick={() => locationClick(openEvent.location)}>
+                    {isListedAsLoc(openEvent.location) && getLocation(openEvent.location)?.displayName}
+                    {isListedAsState(openEvent.location) && (getCurrentState(openEvent.location)?.displayName || oopsieDaisies(openEvent.location)?.displayName)}
                     <MapSvg width={11} name={'pin'} onCompleted={onCompleted} onError={onError} aria-hidden="true" />
                   </button>
                 )}
 
-                <UrlToAbstract url={eventFromId(eventOpenSelected).wikiLink} className={infoStyles.infoBoxInfo} />
-                <a target='_blank' rel='noopener noreferrer' href={eventFromId(eventOpenSelected).wikiLink}>
-                  Wikipedia<span className={utilStyles.srOnly}> article for {eventFromId(eventOpenSelected).displayName}</span>
+                <UrlToAbstract url={openEvent.wikiLink} className={infoStyles.infoBoxInfo} />
+                <a target='_blank' rel='noopener noreferrer' href={openEvent.wikiLink}>
+                  Wikipedia<span className={utilStyles.srOnly}> article for {openEvent.displayName}</span>
                 </a>
               </div>
 

@@ -170,20 +170,52 @@
     all: unset;
     box-sizing: border-box;
     cursor: pointer;
-    display: block;
+
+    /* A flex container rather than a block. `all: unset` leaves this display:block with
+       an auto height, so its only child - an inline <svg> sitting on the text baseline -
+       had the strut's descender added underneath it, making the box ~16x18 and leaving
+       the glyph a pixel high. As a flex item the svg is blockified and the descender
+       stops existing. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+
+    /* Explicitly square, because border-radius:100% on the old ~16x18 box drew an
+       ellipse. 1.4rem still fits inside .infoBoxTabs' 1.5rem height. */
+    width: 1.4rem;
+    height: 1.4rem;
+
     position: absolute;
     left: calc(100% - 1.5rem);
-    top: 50%;
+    /* Plus, not minus. top:50% resolves against .infoBoxTab's padding box, and the tab
+       has a border-bottom but no border-top - so that box is short by 0.1rem only at the
+       bottom, putting its midpoint 0.05rem above the tab's visual centre. */
+    top: calc(50% + 0.05rem);
     transform: translateY(-50%);
+
     opacity: 0;
     pointer-events: none;
     border-radius: 100%;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.3s ease, background-color 0.3s ease;
     margin: 0;
 }
-.infoBoxTab:hover .infoBoxClose {
+
+/* focus-within as well as hover: the button carries a real aria-label but was
+   pointer-events:none until hover, so it could not be reached by keyboard at all. */
+.infoBoxTab:hover .infoBoxClose,
+.infoBoxTab:focus-within .infoBoxClose {
     opacity: 1;
     pointer-events: auto;
+}
+
+.infoBoxClose:hover,
+.infoBoxClose:focus-visible {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+.infoBoxClose:focus-visible {
+    outline: 0.15rem solid #E9EAF3;
+    outline-offset: -0.15rem;
 }
 .infoBoxTabSel {
     background-color: rgba(255,255,255,0.2);
